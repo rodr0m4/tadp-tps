@@ -29,7 +29,7 @@ module Contracts
 
   def method_added(method_name)
     if (@contractified)
-      @method_conditions.store(method_name, {:before => @next_method_precondition, :after => @next_method_postcondition})
+      @method_conditions[method_name] = {:before => @next_method_precondition, :after => @next_method_postcondition}
       @next_method_precondition = nil
       @next_method_postcondition = nil
     end
@@ -65,9 +65,37 @@ module Contracts
     if (tp.defined_class.instance_variable_get(:@contractified) && !(before_or_after == :before && tp.callee_id == :initialize))
       tp.self.class.instance_variable_get(:@each_call_blocks)[before_or_after].each {|block| tp.self.instance_exec(*tp.parameters, &block)}
       if (tp.defined_class.method_has_condition?(before_or_after, tp.callee_id))
-        tp.self.instance_exec(*tp.parameters, &tp.defined_class.instance_variable_get(:@method_conditions)[tp.callee_id][before_or_after])
+        # tp.self.instance_exec(*tp.parameters, &tp.defined_class.instance_variable_get(:@method_conditions)[tp.callee_id][before_or_after])
+
+        enforce_contract_with_arguments(tp, before_or_after)
       end
     end
+  end
+
+  def extract_arguments(tracepoint)
+    param_names = tracepoint.parameters.map(&:last)
+
+    param_names.inject({}) do |hash, name|
+      hash[name] = tracepoint.binding.eval(name.to_s)
+      hash
+    end
+  end
+
+  def enforce_contract_with_arguments(tracepoint, moment)
+    arguments = extract_arguments(tracepoint)
+    scope = tracepoint.self.dup
+
+    arguments.each { |name, value| scope.define_singleton_method(name) { value } }
+
+    contract = tracepoint.defined_class.instance_variable_get(:@method_conditions)[tracepoint.callee_id][moment]
+
+    return_value = nil
+
+    if tracepoint.event == :return
+      return_value = tracepoint.return_value
+    end
+
+    scope.instance_exec(return_value, &contract)
   end
 
   def set_condition(condition, block)
