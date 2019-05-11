@@ -241,6 +241,8 @@ describe Contracts do
       expect {
         should_pass = WithSuperUsage.new(@witness, true)
       }.to_not raise_error
+
+      expect{WithSuperUsage.new(@witness, false)}.to raise_error(Contracts::InvariantError)
     end
   end
 end
