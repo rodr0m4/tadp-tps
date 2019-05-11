@@ -65,8 +65,6 @@ module Contracts
     if (tp.defined_class.instance_variable_get(:@contractified) && !(before_or_after == :before && tp.callee_id == :initialize))
       tp.self.class.instance_variable_get(:@each_call_blocks)[before_or_after].each {|block| tp.self.instance_exec(*tp.parameters, &block)}
       if (tp.defined_class.method_has_condition?(before_or_after, tp.callee_id))
-        # tp.self.instance_exec(*tp.parameters, &tp.defined_class.instance_variable_get(:@method_conditions)[tp.callee_id][before_or_after])
-
         enforce_contract_with_arguments(tp, before_or_after)
       end
     end
