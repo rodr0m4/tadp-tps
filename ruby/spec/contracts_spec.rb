@@ -28,7 +28,7 @@ describe Contracts do
         subject = FailsPreM.new(@witness)
         expect(@witness).to_not receive(:notify)
 
-        expect { subject.m }.to raise_error(Contracts::ContractViolation)
+        expect { subject.m }.to raise_error(Contracts::ContractError)
       end
 
       it "should call the method if the contract passes" do
@@ -68,7 +68,7 @@ describe Contracts do
         expect { should_pass.m }.to_not raise_error
 
         should_not_pass = ContextSubject.new(@witness, false)
-        expect { should_not_pass.m }.to raise_error(Contracts::ContractViolation)
+        expect { should_not_pass.m }.to raise_error(Contracts::ContractError)
       end
 
       it "should have the parameters of the method in context" do
@@ -83,7 +83,8 @@ describe Contracts do
 
         expect(@witness).to receive(:notify).once
         expect { parameters_in_context.m(true) }.to_not raise_error
-        expect { parameters_in_context.m(false) }.to raise_error(Contracts::ContractViolation)
+
+        expect { parameters_in_context.m(false) }.to raise_error(Contracts::ContractError)
       end
 
       it "should work with super" do
@@ -119,7 +120,7 @@ describe Contracts do
         subject = FailAfterMethodCall.new(@witness)
         expect(@witness).to receive(:notify).once
 
-        expect { subject.m }.to raise_error(Contracts::ContractViolation)
+        expect { subject.m }.to raise_error(Contracts::ContractError)
       end
 
       it "should take the method result as a parameter" do
@@ -132,7 +133,8 @@ describe Contracts do
 
         subject = WithResultInConsideration.new
         expect { subject.m(true) }.to_not raise_error
-        expect { subject.m(false) }.to raise_error(Contracts::ContractViolation)
+
+        expect { subject.m(false) }.to raise_error(Contracts::ContractError)
       end
     end
 
@@ -149,7 +151,8 @@ describe Contracts do
 
       subject = NoLeak.new
       expect { subject.will_pass }.to_not raise_error
-      expect { subject.will_not_pass }.to raise_error(Contracts::ContractViolation)
+
+      expect { subject.will_not_pass }.to raise_error(Contracts::ContractError)
     end
   end
 
@@ -194,7 +197,7 @@ describe Contracts do
       expect do
         should_not_pass = WithInstanceVariable.new(@witness, false)
         should_not_pass.m
-      end.to raise_error(Contracts::ContractViolation)
+      end.to raise_error(Contracts::InvariantError)
     end
 
     it "should have instance methods in context" do
@@ -222,7 +225,7 @@ describe Contracts do
       expect do
         should_not_pass = WithMethod.new(@witness, false)
         should_not_pass.m
-      end.to raise_error(Contracts::ContractViolation)
+      end.to raise_error(Contracts::InvariantError)
     end
 
     it "should work with super" do
@@ -238,6 +241,8 @@ describe Contracts do
       expect {
         should_pass = WithSuperUsage.new(@witness, true)
       }.to_not raise_error
+
+      expect{WithSuperUsage.new(@witness, false)}.to raise_error(Contracts::InvariantError)
     end
   end
 end
