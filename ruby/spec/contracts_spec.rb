@@ -83,6 +83,7 @@ describe Contracts do
 
         expect(@witness).to receive(:notify).once
         expect { parameters_in_context.m(true) }.to_not raise_error
+
         expect { parameters_in_context.m(false) }.to raise_error(Contracts::ContractError)
       end
 
@@ -132,6 +133,7 @@ describe Contracts do
 
         subject = WithResultInConsideration.new
         expect { subject.m(true) }.to_not raise_error
+
         expect { subject.m(false) }.to raise_error(Contracts::ContractError)
       end
     end
@@ -149,6 +151,7 @@ describe Contracts do
 
       subject = NoLeak.new
       expect { subject.will_pass }.to_not raise_error
+
       expect { subject.will_not_pass }.to raise_error(Contracts::ContractError)
     end
   end
