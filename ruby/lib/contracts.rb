@@ -43,6 +43,12 @@ module Contracts
     return false
   end
 
+  def self.included(_)
+    p self
+    TracePoint.trace(:call) {|tp| contract_tracepoint(tp, :before)}
+    TracePoint.trace(:return) {|tp| contract_tracepoint(tp, :after)}
+  end
+
   private
 
   def add_block_to_each_call(before_or_after, block)
@@ -53,15 +59,11 @@ module Contracts
     return if (@contractified)
     @contractified = true
 
-    TracePoint.trace(:call) {|tp| contract_tracepoint(tp, :before)}
-
-    TracePoint.trace(:return) {|tp| contract_tracepoint(tp, :after)}
-
     @each_call_blocks = {:before => [], :after => []}
     @method_conditions = {}
   end
 
-  def contract_tracepoint(tp, before_or_after)
+  def self.contract_tracepoint(tp, before_or_after)
     if (tp.defined_class.instance_variable_get(:@contractified) && !(before_or_after == :before && tp.callee_id == :initialize))
       tp.self.class.instance_variable_get(:@each_call_blocks)[before_or_after].each {|block| tp.self.instance_exec(*tp.parameters, &block)}
       if (tp.defined_class.method_has_condition?(before_or_after, tp.callee_id))
@@ -70,7 +72,7 @@ module Contracts
     end
   end
 
-  def extract_arguments(tracepoint)
+  def self.extract_arguments(tracepoint)
     param_names = tracepoint.parameters.map(&:last)
 
     param_names.inject({}) do |hash, name|
@@ -79,11 +81,11 @@ module Contracts
     end
   end
 
-  def enforce_contract_with_arguments(tracepoint, moment)
+  def self.enforce_contract_with_arguments(tracepoint, moment)
     arguments = extract_arguments(tracepoint)
     scope = tracepoint.self.dup
 
-    arguments.each { |name, value| scope.define_singleton_method(name) { value } }
+    arguments.each {|name, value| scope.define_singleton_method(name) {value}}
 
     contract = tracepoint.defined_class.instance_variable_get(:@method_conditions)[tracepoint.callee_id][moment]
 
