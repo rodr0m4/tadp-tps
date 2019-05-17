@@ -1,6 +1,10 @@
 require_relative 'contract_error'
 
 class Condition
+
+  attr_accessor :my_method
+  attr_reader :pre_or_post
+
   def initialize(block, pre_or_post)
     @block = block
     @pre_or_post = pre_or_post

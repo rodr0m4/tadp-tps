@@ -254,4 +254,51 @@ describe Contracts do
       expect {WithSuperUsage.new(@witness, false)}.to raise_error(InvariantError)
     end
   end
+
+  describe "my_methods" do
+    it "No se debe romper cuando es nil condtion" do
+      class MyClass
+
+        def function
+          self
+        end
+
+        pre{true}
+        def metodo
+
+        end
+      end
+
+      expect(MyClass.method_condition :function, :before).to be nil
+      expect(MyClass.method_condition :function, :after).to be nil
+    end
+
+    it "Si le pedimos method condition a una clase nos debe saber decir si es pre o post" do
+      class MyClass
+
+        pre {true}
+        post {true}
+        def saraza
+
+        end
+      end
+
+      hash = MyClass.method_conditions :saraza
+
+      expect(hash[:before]).to_not be nil
+      expect(hash[:after]).to_not be nil
+    end
+
+    it "con una invariante se puede usar class_contracts" do
+      class MyClass
+        invariant {true}
+
+        def saraza
+
+        end
+      end
+
+      expect(MyClass.class_contracts :before).to_not be nil
+    end
+  end
 end

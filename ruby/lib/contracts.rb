@@ -3,11 +3,8 @@ require_relative 'invariant'
 require_relative 'condition'
 
 module Contracts
-  def before_and_after_each_call(before_block, after_block)
-    contractify_class
-    add_block_to_each_call(:before, before_block)
-    add_block_to_each_call(:after, after_block)
-  end
+
+  attr_reader :invariants
 
   def invariant(&condition_block)
     contractify_class
@@ -27,8 +24,18 @@ module Contracts
   def method_added(method_name)
     if @contractified
       @method_conditions[method_name] = {:before => @next_method_precondition, :after => @next_method_postcondition}
+
+      bound_method_to_condition(@next_method_precondition, method_name)
+      bound_method_to_condition(@next_method_postcondition, method_name)
+
       @next_method_precondition = nil
       @next_method_postcondition = nil
+    end
+  end
+
+  def bound_method_to_condition(condition, method_name)
+    unless condition.nil?
+      condition.my_method = instance_method method_name
     end
   end
 
@@ -54,6 +61,10 @@ module Contracts
     @method_conditions[method_name][before_or_after]
   end
 
+  def method_conditions(method_name)
+    @method_conditions[method_name]
+  end
+
   def self.included(_)
     TracePoint.trace(:call) {|tp| contract_tracepoint(tp, :before)}
     TracePoint.trace(:return) {|tp| contract_tracepoint(tp, :after)}
@@ -71,7 +82,9 @@ module Contracts
 
     @each_call_blocks = {:before => [], :after => []}
     @invariants = []
-    @method_conditions = {}
+    @method_conditions = Hash.new do
+      |hash, key| hash[key] = {:before => nil, :after => nil}
+    end
   end
 
   def self.contract_tracepoint(tp, before_or_after)
