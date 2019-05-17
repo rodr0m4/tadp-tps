@@ -1,0 +1,2 @@
+class ContractError < StandardError
+end
