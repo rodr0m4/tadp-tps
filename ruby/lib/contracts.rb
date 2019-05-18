@@ -66,17 +66,19 @@ module Contracts
     @contractified = true
 
     @invariants = []
-    @method_conditions = Hash.new do
-      |hash, key| hash[key] = {:before => nil, :after => nil}
+    @method_conditions = Hash.new do |hash, key|
+      hash[key] = {:before => nil, :after => nil}
     end
+
   end
 
   def self.contract_tracepoint(tp, before_or_after)
-    if tp.defined_class.contractified && !(before_or_after == :before && tp.callee_id == :initialize)
-      tp.defined_class.invariants.each {|contract| contract.enforce(tp.self)}
-      if tp.defined_class.method_has_condition?(tp.callee_id, before_or_after)
-        enforce_condition_with_arguments(tp, before_or_after)
-      end
+    return if !tp.defined_class.contractified || (before_or_after == :before && tp.callee_id == :initialize)
+
+    tp.defined_class.invariants.each {|contract| contract.enforce(tp.self)}
+    
+    if tp.defined_class.method_has_condition?(tp.callee_id, before_or_after)
+      enforce_condition_with_arguments(tp, before_or_after)
     end
   end
 
@@ -89,19 +91,21 @@ module Contracts
     end
   end
 
-  def self.enforce_condition_with_arguments(tracepoint, before_or_after)
+  def self.create_context(tracepoint)
     arguments = extract_arguments(tracepoint)
     context = tracepoint.self.dup
 
     arguments.each {|name, value| context.define_singleton_method(name) {value}}
 
+    context
+  end
+
+  def self.enforce_condition_with_arguments(tracepoint, before_or_after)
+    context = create_context(tracepoint)
+
     contract = tracepoint.defined_class.method_condition(tracepoint.callee_id, before_or_after)
 
-    return_value = nil
-
-    if tracepoint.event == :return
-      return_value = tracepoint.return_value
-    end
+    return_value = tracepoint.return_value if tracepoint.event == :return
 
     contract.enforce(context, return_value)
   end
