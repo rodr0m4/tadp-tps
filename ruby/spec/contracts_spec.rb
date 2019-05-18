@@ -256,7 +256,7 @@ describe Contracts do
   end
 
   describe "my_methods" do
-    it "No se debe romper cuando es nil condtion" do
+    it "shouldn't break with nil conditions" do
       class MyClass
 
         def function
@@ -273,7 +273,7 @@ describe Contracts do
       expect(MyClass.method_condition :function, :after).to be nil
     end
 
-    it "Si le pedimos method condition a una clase nos debe saber decir si es pre o post" do
+    it "should give us the method conditions in a hash with :before and :after" do
       class MyClass
 
         pre {true}
@@ -289,7 +289,7 @@ describe Contracts do
       expect(hash[:after]).to_not be nil
     end
 
-    it "con una invariante se puede usar class_contracts" do
+    it "should be capable of telling us the invariants" do
       class MyClass
         invariant {true}
 
@@ -298,7 +298,10 @@ describe Contracts do
         end
       end
 
-      expect(MyClass.invariants).to_not be nil
+      invariants = MyClass.invariants
+
+      expect(invariants).to_not be nil
+      expect(invariants.size).to eq 1
     end
   end
 end
