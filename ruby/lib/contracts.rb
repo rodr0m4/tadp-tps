@@ -1,6 +1,6 @@
-require_relative 'each_call_block'
 require_relative 'invariant'
 require_relative 'condition'
+require_relative 'module'
 
 module Contracts
 
@@ -13,16 +13,16 @@ module Contracts
 
   def pre(&block)
     contractify_class
-    instance_variable_set(:@next_method_precondition, Condition.new(block, :pre))
+    @next_method_precondition = Condition.new(block, :pre)
   end
 
   def post(&block)
     contractify_class
-    instance_variable_set(:@next_method_postcondition, Condition.new(block, :post))
+    @next_method_postcondition = Condition.new(block, :post)
   end
 
   def method_added(method_name)
-    if @contractified
+    if contractified
       @method_conditions[method_name] = {:before => @next_method_precondition, :after => @next_method_postcondition}
 
       bound_method_to_condition(@next_method_precondition, method_name)
@@ -36,17 +36,6 @@ module Contracts
   def bound_method_to_condition(condition, method_name)
     unless condition.nil?
       condition.my_method = instance_method method_name
-    end
-  end
-
-  def class_contracts(before_or_after)
-    case before_or_after
-    when :before
-      return @each_call_blocks[:before]
-    when :after
-      return @invariants + @each_call_blocks[:after]
-    else
-      raise ArgumentError
     end
   end
 
@@ -72,15 +61,10 @@ module Contracts
 
   private
 
-  def add_block_to_each_call(before_or_after, block)
-    @each_call_blocks[before_or_after].push(EachCallBlock.new(block))
-  end
-
   def contractify_class
-    return if (@contractified)
+    return if (contractified)
     @contractified = true
 
-    @each_call_blocks = {:before => [], :after => []}
     @invariants = []
     @method_conditions = Hash.new do
       |hash, key| hash[key] = {:before => nil, :after => nil}
@@ -88,8 +72,8 @@ module Contracts
   end
 
   def self.contract_tracepoint(tp, before_or_after)
-    if tp.defined_class.instance_variable_get(:@contractified) && !(before_or_after == :before && tp.callee_id == :initialize)
-      tp.defined_class.class_contracts(before_or_after).each {|contract| contract.enforce(tp.self)}
+    if tp.defined_class.contractified && !(before_or_after == :before && tp.callee_id == :initialize)
+      tp.defined_class.invariants.each {|contract| contract.enforce(tp.self)}
       if tp.defined_class.method_has_condition?(tp.callee_id, before_or_after)
         enforce_condition_with_arguments(tp, before_or_after)
       end

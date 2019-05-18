@@ -298,7 +298,7 @@ describe Contracts do
         end
       end
 
-      expect(MyClass.class_contracts :before).to_not be nil
+      expect(MyClass.invariants).to_not be nil
     end
   end
 end
