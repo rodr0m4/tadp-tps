@@ -1,46 +1,57 @@
+require_relative 'invariant'
+require_relative 'condition'
+require_relative 'module'
+
 module Contracts
-  def before_and_after_each_call(before_block, after_block)
-    contractify_class
-    add_block_to_each_call(:before, before_block)
-    add_block_to_each_call(:after, after_block)
-  end
+
+  attr_reader :invariants
 
   def invariant(&condition_block)
     contractify_class
-    add_block_to_each_call(:after, invariant_block(condition_block))
+    @invariants.push(Invariant.new(condition_block))
   end
 
   def pre(&block)
-    set_condition(:@next_method_precondition, block)
+    contractify_class
+    @next_method_precondition = Condition.new(block, :pre)
   end
 
   def post(&block)
-    set_condition(:@next_method_postcondition, block)
-  end
-
-  class ContractError < StandardError
-  end
-
-  class InvariantError < ContractError
-  end
-
-  class ConditionError < ContractError
+    contractify_class
+    @next_method_postcondition = Condition.new(block, :post)
   end
 
   def method_added(method_name)
-    if (@contractified)
+    if contractified
       @method_conditions[method_name] = {:before => @next_method_precondition, :after => @next_method_postcondition}
+
+      bound_method_to_condition(@next_method_precondition, method_name)
+      bound_method_to_condition(@next_method_postcondition, method_name)
+
       @next_method_precondition = nil
       @next_method_postcondition = nil
     end
   end
 
-
-  def method_has_condition?(before_or_after, method_name)
-    if (@method_conditions[method_name])
-      return @method_conditions[method_name][before_or_after] != nil
+  def bound_method_to_condition(condition, method_name)
+    unless condition.nil?
+      condition.my_method = instance_method method_name
     end
-    return false
+  end
+
+  def method_has_condition?(method_name, before_or_after)
+    if @method_conditions[method_name] && @method_conditions[method_name][before_or_after]
+      return true
+    end
+    false
+  end
+
+  def method_condition(method_name, before_or_after)
+    @method_conditions[method_name][before_or_after]
+  end
+
+  def method_conditions(method_name)
+    @method_conditions[method_name]
   end
 
   def self.included(_)
@@ -50,24 +61,24 @@ module Contracts
 
   private
 
-  def add_block_to_each_call(before_or_after, block)
-    @each_call_blocks[before_or_after].push(block)
-  end
-
   def contractify_class
-    return if (@contractified)
+    return if (contractified)
     @contractified = true
 
-    @each_call_blocks = {:before => [], :after => []}
-    @method_conditions = {}
+    @invariants = []
+    @method_conditions = Hash.new do |hash, key|
+      hash[key] = {:before => nil, :after => nil}
+    end
+
   end
 
   def self.contract_tracepoint(tp, before_or_after)
-    if (tp.defined_class.instance_variable_get(:@contractified) && !(before_or_after == :before && tp.callee_id == :initialize))
-      tp.self.class.instance_variable_get(:@each_call_blocks)[before_or_after].each {|block| tp.self.instance_exec(*tp.parameters, &block)}
-      if (tp.defined_class.method_has_condition?(before_or_after, tp.callee_id))
-        enforce_contract_with_arguments(tp, before_or_after)
-      end
+    return if !tp.defined_class.contractified || (before_or_after == :before && tp.callee_id == :initialize)
+
+    tp.defined_class.invariants.each {|contract| contract.enforce(tp.self)}
+    
+    if tp.defined_class.method_has_condition?(tp.callee_id, before_or_after)
+      enforce_condition_with_arguments(tp, before_or_after)
     end
   end
 
@@ -80,41 +91,22 @@ module Contracts
     end
   end
 
-  def self.enforce_contract_with_arguments(tracepoint, moment)
+  def self.create_context(tracepoint)
     arguments = extract_arguments(tracepoint)
-    scope = tracepoint.self.dup
+    context = tracepoint.self.dup
 
-    arguments.each {|name, value| scope.define_singleton_method(name) {value}}
+    arguments.each {|name, value| context.define_singleton_method(name) {value}}
 
-    contract = tracepoint.defined_class.instance_variable_get(:@method_conditions)[tracepoint.callee_id][moment]
-
-    return_value = nil
-
-    if tracepoint.event == :return
-      return_value = tracepoint.return_value
-    end
-
-    scope.instance_exec(return_value, &contract)
+    context
   end
 
-  def set_condition(condition, block)
-    contractify_class
-    instance_variable_set(condition, condition_block(block))
-  end
+  def self.enforce_condition_with_arguments(tracepoint, before_or_after)
+    context = create_context(tracepoint)
 
-  def invariant_block(condition_block)
-    proc do
-      if (!instance_eval &condition_block)
-        raise InvariantError
-      end
-    end
-  end
+    contract = tracepoint.defined_class.method_condition(tracepoint.callee_id, before_or_after)
 
-  def condition_block(block)
-    proc {|args|
-      if (!instance_exec(args, &block))
-        raise ConditionError
-      end
-    }
+    return_value = tracepoint.return_value if tracepoint.event == :return
+
+    contract.enforce(context, return_value)
   end
 end

@@ -1,3 +1,5 @@
+# TODO Test before_and_after_each_call
+
 class Subject
   attr_reader :witness
 
@@ -28,7 +30,7 @@ describe Contracts do
         subject = FailsPreM.new(@witness)
         expect(@witness).to_not receive(:notify)
 
-        expect { subject.m }.to raise_error(Contracts::ContractError)
+        expect {subject.m}.to raise_error(ContractError)
       end
 
       it "should call the method if the contract passes" do
@@ -36,6 +38,7 @@ describe Contracts do
           pre do
             true
           end
+
           def m
             witness.notify
           end
@@ -44,7 +47,7 @@ describe Contracts do
         subject = PassesPreM.new(@witness)
         expect(@witness).to receive(:notify)
 
-        expect { subject.m }.to_not raise_error
+        expect {subject.m}.to_not raise_error
       end
 
       it "should have the methods/instance variables from the object in context" do
@@ -56,7 +59,8 @@ describe Contracts do
             @passes = passes
           end
 
-          pre { passes }
+          pre {passes}
+
           def m
             witness.notify
           end
@@ -65,15 +69,16 @@ describe Contracts do
         expect(@witness).to receive(:notify).once
 
         should_pass = ContextSubject.new(@witness, true)
-        expect { should_pass.m }.to_not raise_error
+        expect {should_pass.m}.to_not raise_error
 
         should_not_pass = ContextSubject.new(@witness, false)
-        expect { should_not_pass.m }.to raise_error(Contracts::ContractError)
+        expect {should_not_pass.m}.to raise_error(ContractError)
       end
 
       it "should have the parameters of the method in context" do
         class ParametersInContext < Subject
-          pre { passes }
+          pre {passes}
+
           def m(passes)
             witness.notify
           end
@@ -82,9 +87,9 @@ describe Contracts do
         parameters_in_context = ParametersInContext.new(@witness)
 
         expect(@witness).to receive(:notify).once
-        expect { parameters_in_context.m(true) }.to_not raise_error
+        expect {parameters_in_context.m(true)}.to_not raise_error
 
-        expect { parameters_in_context.m(false) }.to raise_error(Contracts::ContractError)
+        expect {parameters_in_context.m(false)}.to raise_error(ContractError)
       end
 
       it "should work with super" do
@@ -94,7 +99,8 @@ describe Contracts do
         end
 
         class Child < Parent
-          post { @bar }
+          post {@bar}
+
           def m(foo)
             super(foo)
             @bar = true
@@ -111,7 +117,8 @@ describe Contracts do
     describe "#post" do
       it "should fail after the method is called" do
         class FailAfterMethodCall < Subject
-          post { false }
+          post {false}
+
           def m
             witness.notify
           end
@@ -120,28 +127,30 @@ describe Contracts do
         subject = FailAfterMethodCall.new(@witness)
         expect(@witness).to receive(:notify).once
 
-        expect { subject.m }.to raise_error(Contracts::ContractError)
+        expect {subject.m}.to raise_error(ContractError)
       end
 
       it "should take the method result as a parameter" do
         class WithResultInConsideration
-          post { |result| result }
+          post {|result| result}
+
           def m(passes)
             passes
           end
         end
 
         subject = WithResultInConsideration.new
-        expect { subject.m(true) }.to_not raise_error
+        expect {subject.m(true)}.to_not raise_error
 
-        expect { subject.m(false) }.to raise_error(Contracts::ContractError)
+        expect {subject.m(false)}.to raise_error(ContractError)
       end
     end
 
     it "should not leak contracts over other methods" do
       class NoLeak
-        pre { false }
-        post { false }
+        pre {false}
+        post {false}
+
         def will_not_pass
         end
 
@@ -150,9 +159,9 @@ describe Contracts do
       end
 
       subject = NoLeak.new
-      expect { subject.will_pass }.to_not raise_error
+      expect {subject.will_pass}.to_not raise_error
 
-      expect { subject.will_not_pass }.to raise_error(Contracts::ContractError)
+      expect {subject.will_not_pass}.to raise_error(ContractError)
     end
   end
 
@@ -161,7 +170,7 @@ describe Contracts do
       class WithInvariant < Subject
         attr_reader :passes
 
-        invariant { true }
+        invariant {true}
 
         def m
         end
@@ -175,7 +184,7 @@ describe Contracts do
 
     it "should have instance variables in context" do
       class WithInstanceVariable < Subject
-        invariant { @passes }
+        invariant {@passes}
 
         def initialize(witness, passes)
           @witness = witness
@@ -197,13 +206,13 @@ describe Contracts do
       expect do
         should_not_pass = WithInstanceVariable.new(@witness, false)
         should_not_pass.m
-      end.to raise_error(Contracts::InvariantError)
+      end.to raise_error(InvariantError)
     end
 
     it "should have instance methods in context" do
       class WithMethod < Subject
         attr_reader :passes
-        invariant { passes }
+        invariant {passes}
 
         def initialize(witness, passes)
           @witness = witness
@@ -225,12 +234,12 @@ describe Contracts do
       expect do
         should_not_pass = WithMethod.new(@witness, false)
         should_not_pass.m
-      end.to raise_error(Contracts::InvariantError)
+      end.to raise_error(InvariantError)
     end
 
     it "should work with super" do
       class WithSuperUsage < Subject
-        invariant { @foo }
+        invariant {@foo}
 
         def initialize(witness, foo)
           super(witness)
@@ -242,7 +251,57 @@ describe Contracts do
         should_pass = WithSuperUsage.new(@witness, true)
       }.to_not raise_error
 
-      expect{WithSuperUsage.new(@witness, false)}.to raise_error(Contracts::InvariantError)
+      expect {WithSuperUsage.new(@witness, false)}.to raise_error(InvariantError)
+    end
+  end
+
+  describe "my_methods" do
+    it "shouldn't break with nil conditions" do
+      class MyClass
+
+        def function
+          self
+        end
+
+        pre{true}
+        def metodo
+
+        end
+      end
+
+      expect(MyClass.method_condition :function, :before).to be nil
+      expect(MyClass.method_condition :function, :after).to be nil
+    end
+
+    it "should give us the method conditions in a hash with :before and :after" do
+      class MyClass
+
+        pre {true}
+        post {true}
+        def saraza
+
+        end
+      end
+
+      hash = MyClass.method_conditions :saraza
+
+      expect(hash[:before]).to_not be nil
+      expect(hash[:after]).to_not be nil
+    end
+
+    it "should be capable of telling us the invariants" do
+      class MyClass
+        invariant {true}
+
+        def saraza
+
+        end
+      end
+
+      invariants = MyClass.invariants
+
+      expect(invariants).to_not be nil
+      expect(invariants.size).to eq 1
     end
   end
 end
