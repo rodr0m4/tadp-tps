@@ -21,6 +21,10 @@ trait Parser[A] { self =>
       case failure : Failure => failure
     }
   }
+
+  def ~>[B](parser: Parser[B]) : Parser[B] = (this <> parser).map(_._2)
+
+  def <~[B](parser: Parser[B]) : Parser[A] = (this <> parser).map(_._1)
 }
 
 object anyChar extends Parser[Char] {
@@ -30,6 +34,56 @@ object anyChar extends Parser[Char] {
 object char {
   def apply(expected: Char) : Parser[Char] = charSatisfies(_ == expected, actual => s"$actual is not $expected")
 }
+
+// -----------------
+
+// IMPLEMENTACION MAS OBJETOSA
+// PROS: no paso input por todos lados
+// CONTRAS: tiene mas codigo, es mas largo
+
+trait CharPredicate extends Parser[Char] {
+  def matches(char: Char): Boolean
+  def errorMessage(char: Char): String = s"$char did not match"
+
+  def apply(input: String): Result[Char] = input match {
+    case "" => Failure("empty string")
+    case x if matches(x.head) => Success(input.head, input.tail)
+    case _ => Failure(errorMessage(input.head))
+  }
+}
+
+object anyChar2 extends CharPredicate {
+  override def matches(char: Char): Boolean = true
+}
+
+object char2 {
+  def apply(expected : Char) : CharPredicate = new CharPredicate {
+    override def matches(char: Char): Boolean = expected == char
+
+    override def errorMessage(char: Char): String = s"$char is not $expected"
+  }
+
+}
+
+object letter2 extends CharPredicate {
+  override def matches(char: Char): Boolean = char.isLetter
+
+  override def errorMessage(char: Char): String = s"$char is not letter"
+}
+
+object digit2 extends CharPredicate {
+  override def matches(char: Char): Boolean = char.isDigit
+
+  override def errorMessage(char: Char): String = s"$char is not digit"
+}
+
+object alphaNum2 extends CharPredicate {
+  override def matches(char: Char): Boolean = char.isLetterOrDigit
+
+  override def errorMessage(char: Char): String = s"$char is neither letter nor digit"
+}
+
+// -----------------
 
 object charSatisfies {
   def apply(condition : Char => Boolean, errorMessage: Char => String = x => s"$x did not match") : Parser[Char] = new Parser[Char] {
