@@ -43,3 +43,7 @@ object letter extends Parser[Char]{
 object digit extends Parser[Char]{
   override def apply(input: String): Result[Char] = charSatisfies(_.isDigit, actual => s"$actual is not digit")(input)
 }
+
+object alphaNum extends Parser[Char] {
+  override def apply(input: String): Result[Char] = charSatisfies(_.isLetterOrDigit, actual => s"$actual is neither letter nor digit")(input)
+}
