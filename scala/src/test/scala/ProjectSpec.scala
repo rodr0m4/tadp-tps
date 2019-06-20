@@ -75,4 +75,14 @@ class ProjectSpec extends FreeSpec with Matchers {
     val Failure(reason) = letter("0la")
     reason shouldBe "0 is not letter"
   }
+
+  "alphaNum should parse when is digit or num" in {
+    val Success(parsed, _) = alphaNum("sdfghjk")
+    parsed shouldBe 's'
+  }
+
+  "alphaNum should not parse when is non digit or num" in {
+    val Failure(reason) = alphaNum("#ModoDiablo")
+    reason shouldBe "# is neither letter nor digit"
+  }
 }
