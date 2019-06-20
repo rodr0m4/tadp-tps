@@ -113,4 +113,13 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     reason shouldBe "h is not digit"
   }
 
+  """string("karen") should parse when input is a string that starts with "karen"""" in {
+    val Success(parsed, remaining) = string("karen")("karen tiene sueño")
+    parsed shouldBe "karen"
+    remaining shouldBe " tiene sueño"
+  }
+  """string("karen") should not parse when input is not a string that starts with "karen"""" in {
+    val Failure(reason) = string("karen")("rodri tiene sueño")
+    reason shouldBe "rodri tiene sueño does not start with karen"
+  }
 }

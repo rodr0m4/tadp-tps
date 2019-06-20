@@ -57,3 +57,12 @@ object digit extends Parser[Char]{
 object alphaNum extends Parser[Char] {
   override def apply(input: String): Result[Char] = charSatisfies(_.isLetterOrDigit, actual => s"$actual is neither letter nor digit")(input)
 }
+
+object string {
+  def apply(prefix: String): Parser[String] = new Parser[String] {
+    override def apply(input: String): Result[String] = input match {
+      case _ if input.startsWith(prefix) => Success(prefix, input.replace(prefix, ""))
+      case _ => Failure(s"$input does not start with $prefix")
+    }
+  }
+}
