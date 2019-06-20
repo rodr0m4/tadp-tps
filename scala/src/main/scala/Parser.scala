@@ -11,6 +11,16 @@ trait Parser[A] { self =>
       case failure : Failure => failure
     }
   }
+
+  def <>[B](parser: Parser[B]) : Parser[(A, B)] = new Parser[(A, B)] {
+    override def apply(input: String): Result[(A, B)] = self(input) match {
+      case Success(firstValue, remaining) => parser(remaining) match {
+        case Success(secondValue, secondRemaining) => Success((firstValue, secondValue), secondRemaining)
+        case failure : Failure => failure
+      }
+      case failure : Failure => failure
+    }
+  }
 }
 
 object anyChar extends Parser[Char] {

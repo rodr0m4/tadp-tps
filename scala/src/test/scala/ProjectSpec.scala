@@ -1,6 +1,7 @@
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.{FreeSpec, Matchers, OneInstancePerTest}
 
-class ProjectSpec extends FreeSpec with Matchers {
+class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
   "anyChar should parse hola" in {
     val Success(char, remaining) = anyChar("hola")
@@ -85,4 +86,31 @@ class ProjectSpec extends FreeSpec with Matchers {
     val Failure(reason) = alphaNum("#ModoDiablo")
     reason shouldBe "# is neither letter nor digit"
   }
+
+  "<> when both parses parse we get a new one" in {
+    val parser = char('h') <> digit
+    val Success(parsed, remaining) = parser("h1")
+
+    parsed shouldBe ('h', '1')
+    remaining shouldBe ""
+  }
+
+  "<> when second parse fails it fails" in {
+    val parser = anyChar <> letter
+    val Failure(reason) = parser("123")
+
+    reason shouldBe "2 is not letter"
+  }
+
+  "<> when first parse fails it fails and does not call the second parser" in {
+    val mockedParser = stub[Parser[Any]]
+    val parser = digit <> mockedParser
+
+    (mockedParser.apply _).verify(*).never()
+
+    val Failure(reason) = parser("hola")
+
+    reason shouldBe "h is not digit"
+  }
+
 }
