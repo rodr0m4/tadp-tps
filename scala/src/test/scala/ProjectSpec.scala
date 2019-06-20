@@ -1,6 +1,7 @@
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.{FreeSpec, Matchers, OneInstancePerTest}
 
-class ProjectSpec extends FreeSpec with Matchers {
+class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
   "anyChar should parse hola" in {
     val Success(char, remaining) = anyChar("hola")
@@ -85,4 +86,119 @@ class ProjectSpec extends FreeSpec with Matchers {
     val Failure(reason) = alphaNum("#ModoDiablo")
     reason shouldBe "# is neither letter nor digit"
   }
+
+  "<> when both parses parse we get a new one" in {
+    val parser = char('h') <> digit
+    val Success(parsed, remaining) = parser("h1")
+
+    parsed shouldBe ('h', '1')
+    remaining shouldBe ""
+  }
+
+  "<> when second parse fails it fails" in {
+    val parser = anyChar <> letter
+    val Failure(reason) = parser("123")
+
+    reason shouldBe "2 is not letter"
+  }
+
+  "<> when first parse fails it fails and does not call the second parser" in {
+    val mockedParser = stub[Parser[Any]]
+    val parser = digit <> mockedParser
+
+    (mockedParser.apply _).verify(*).never()
+
+    val Failure(reason) = parser("hola")
+
+    reason shouldBe "h is not digit"
+  }
+
+  """string("karen") should parse when input is a string that starts with "karen"""" in {
+    val Success(parsed, remaining) = string("karen")("karen tiene sueño")
+    parsed shouldBe "karen"
+    remaining shouldBe " tiene sueño"
+  }
+  """string("karen") should not parse when input is not a string that starts with "karen"""" in {
+    val Failure(reason) = string("karen")("rodri tiene sueño")
+    reason shouldBe "rodri tiene sueño does not start with karen"
+  }
+
+  "~> when both parses parse we get a new one" in {
+    val parser = char('h') ~> digit
+    val Success(parsed, remaining) = parser("h1")
+
+    parsed shouldBe '1'
+    remaining shouldBe ""
+  }
+
+  "~> when second parse fails it fails" in {
+    val parser = anyChar ~> letter
+    val Failure(reason) = parser("123")
+
+    reason shouldBe "2 is not letter"
+  }
+
+  "~> when first parse fails it fails and does not call the second parser" in {
+    val mockedParser = stub[Parser[Any]]
+    val parser = digit ~> mockedParser
+
+    (mockedParser.apply _).verify(*).never()
+
+    val Failure(reason) = parser("hola")
+
+    reason shouldBe "h is not digit"
+  }
+
+  "<~ when both parses parse we get a new one" in {
+    val parser = char('h') <~ digit
+    val Success(parsed, remaining) = parser("h1")
+
+    parsed shouldBe 'h'
+    remaining shouldBe ""
+  }
+
+  "<~ when second parse fails it fails" in {
+    val parser = anyChar <~ letter
+    val Failure(reason) = parser("123")
+
+    reason shouldBe "2 is not letter"
+  }
+
+  "<~ when first parse fails it fails and does not call the second parser" in {
+    val mockedParser = stub[Parser[Any]]
+    val parser = digit <~ mockedParser
+
+    (mockedParser.apply _).verify(*).never()
+
+    val Failure(reason) = parser("hola")
+
+    reason shouldBe "h is not digit"
+  }
+
+  //to do: How to mock parsers
+
+  "<|> when the first parser fails and the second one parses we get the second value" in {
+    val parser = digit <|> letter
+    val Success(value, remaining) = parser("lh34")
+
+    value shouldBe 'l'
+    remaining shouldBe "h34"
+  }
+
+  "satisfies when the parser parses and the value passes the condition we get a success" in {
+    val parser = digit.map(_.toString.toInt).satisfies(number => number < 5)
+    val Success(value, remaining) = parser("1234")
+
+    value shouldBe 1
+    remaining shouldBe "234"
+  }
+
+  "satisfies when the parser parses but the value does not pass the conditino we get a failure" in {
+    val parser = digit.map(_.toString.toInt).satisfies(number => number > 10)
+    val Failure(reason) = parser("1234")
+
+    reason shouldBe "1 does not satisfy condition"
+  }
+
+
 }
