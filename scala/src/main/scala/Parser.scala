@@ -12,6 +12,14 @@ trait Parser[A] { self =>
     }
   }
 
+  //No funciona para parsers de diferentes tipos
+  def <|>(parser : Parser[A]) : Parser[A] = new Parser[A]{
+    override def apply(input: String): Result[A] = self(input) match {
+      case success : Success[A] => success
+      case _ => parser(input)
+    }
+  }
+
   def <>[B](parser: Parser[B]) : Parser[(A, B)] = new Parser[(A, B)] {
     override def apply(input: String): Result[(A, B)] = self(input) match {
       case Success(firstValue, remaining) => parser(remaining) match {
@@ -25,6 +33,14 @@ trait Parser[A] { self =>
   def ~>[B](parser: Parser[B]) : Parser[B] = (this <> parser).map(_._2)
 
   def <~[B](parser: Parser[B]) : Parser[A] = (this <> parser).map(_._1)
+
+  def satisfies(condition: A => Boolean) : Parser[A] = new Parser[A] {
+    override def apply(input: String): Result[A] = self(input) match {
+      case Success(value, remaining) if condition(value) => Success(value, remaining)
+      case Success(value, _) => Failure(s"$value does not satisfy condition")
+      case failure : Failure => failure
+    }
+  }
 }
 
 object anyChar extends Parser[Char] {
