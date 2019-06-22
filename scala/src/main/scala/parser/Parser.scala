@@ -32,6 +32,17 @@ trait Parser[A] { self =>
       if (condition(value)) Success(result) else Failure(DoesNotSatisfyPredicateException(value))
     }
   }
+
+  lazy val opt: Parser[Option[A]] = new Parser[Option[A]] {
+    override def apply(input: String): Result[Option[A]] =
+      self(input).map {
+        case (value, remaining) => (Some(value), remaining)
+      }.recover { case _ => (None, "") }
+  }
+
+  lazy val `?`: Parser[Option[A]] = opt
+  lazy val `*`: Parser[List[A]] = ???
+  lazy val `+`: Parser[List[A]] = (this <> this.*).map { case (head, tail) => head :: tail }
 }
 
 case class DoesNotSatisfyPredicateException[A](value: A) extends Exception
