@@ -1,46 +1,55 @@
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FreeSpec, Matchers, OneInstancePerTest}
+import parser.alphaNum.NotAlphaNumException
+import parser.char.ExpectedButFound
+import parser.charSatisfies.EmptyStringException
+import parser.digit.NotADigitException
+import parser.letter.NotALetterException
+import parser.string.DoesNotStartWithException
+import parser.{DoesNotSatisfyPredicateException, Parser, alphaNum, anyChar, char, digit, letter, string, void}
+
+import scala.util.{Failure, Success}
 
 class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
   "anyChar should parse hola" in {
-    val Success(char, remaining) = anyChar("hola")
+    val Success((char, remaining)) = anyChar("hola")
     char shouldBe 'h'
     remaining shouldBe "ola"
   }
 
   "anyChar should parse chau" in {
-    val Success(char, remaining) = anyChar("chau")
+    val Success((char, remaining)) = anyChar("chau")
     char shouldBe 'c'
     remaining shouldBe "hau"
   }
   "anyChar should not parse empty string" in {
     val Failure(reason) = anyChar("")
-    reason shouldBe "empty string"
+    reason shouldBe EmptyStringException
   }
 
   "char('x') should parse string started with x" in {
-    val Success(first, remaining) = char('x')("xol")
+    val Success((first, remaining)) = char('x')("xol")
     first shouldBe 'x'
     remaining shouldBe "ol"
   }
   "char('z') should not parse string started with x" in {
     val Failure(reason) = char('x')("zol")
-    reason shouldBe "z is not x"
+    reason shouldBe ExpectedButFound('x', 'z')
   }
   "char('z') should not parse empty string" in {
     val Failure(reason) = char('x')("")
-    reason shouldBe "empty string"
+    reason shouldBe EmptyStringException
   }
 
   "void should parse hola" in {
-    val Success(parsed,remaining) = void("hola")
+    val Success((parsed,remaining)) = void("hola")
     parsed shouldBe ()
     remaining shouldBe "ola"
   }
 
   "const replaces whatever this parser parses" in {
-    val Success(parsed, _) = anyChar.const("Karen es la mas kpa")("hola")
+    val Success((parsed, _)) = anyChar.const("Karen es la mas kpa")("hola")
     parsed shouldBe "Karen es la mas kpa"
   }
 
@@ -53,43 +62,43 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
   "parser.map transform to upper" in {
     val parser = anyChar.map(_.toUpper)
     val input = "batman"
-    val Success(parsed, _) = parser(input)
+    val Success((parsed, _)) = parser(input)
     parsed shouldBe 'B'
   }
 
   "digit should parse when is digit" in {
-    val Success(parsed, _) = digit("1234444")
+    val Success((parsed, _)) = digit("1234444")
     parsed shouldBe '1'
   }
 
   "digit should not parse when is non digit" in {
     val Failure(reason) = digit("k1234444")
-    reason shouldBe "k is not digit"
+    reason shouldBe NotADigitException('k')
   }
 
   "letter should parse when is a letter" in {
-    val Success(parsed, _) = letter("karen")
+    val Success((parsed, _)) = letter("karen")
     parsed shouldBe 'k'
   }
 
   "letter should not parse when is non letter" in {
     val Failure(reason) = letter("0la")
-    reason shouldBe "0 is not letter"
+    reason shouldBe NotALetterException('0')
   }
 
   "alphaNum should parse when is digit or num" in {
-    val Success(parsed, _) = alphaNum("sdfghjk")
+    val Success((parsed, _)) = alphaNum("sdfghjk")
     parsed shouldBe 's'
   }
 
   "alphaNum should not parse when is non digit or num" in {
     val Failure(reason) = alphaNum("#ModoDiablo")
-    reason shouldBe "# is neither letter nor digit"
+    reason shouldBe NotAlphaNumException('#')
   }
 
   "<> when both parses parse we get a new one" in {
     val parser = char('h') <> digit
-    val Success(parsed, remaining) = parser("h1")
+    val Success((parsed, remaining)) = parser("h1")
 
     parsed shouldBe ('h', '1')
     remaining shouldBe ""
@@ -99,7 +108,7 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val parser = anyChar <> letter
     val Failure(reason) = parser("123")
 
-    reason shouldBe "2 is not letter"
+    reason shouldBe NotALetterException('2')
   }
 
   "<> when first parse fails it fails and does not call the second parser" in {
@@ -110,22 +119,23 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
     val Failure(reason) = parser("hola")
 
-    reason shouldBe "h is not digit"
+    reason shouldBe NotADigitException('h')
   }
 
   """string("karen") should parse when input is a string that starts with "karen"""" in {
-    val Success(parsed, remaining) = string("karen")("karen tiene sueño")
+    val Success((parsed, remaining)) = string("karen")("karen tiene sueño")
     parsed shouldBe "karen"
     remaining shouldBe " tiene sueño"
   }
+
   """string("karen") should not parse when input is not a string that starts with "karen"""" in {
     val Failure(reason) = string("karen")("rodri tiene sueño")
-    reason shouldBe "rodri tiene sueño does not start with karen"
+    reason shouldBe DoesNotStartWithException("karen", "rodri tiene sueño")
   }
 
   "~> when both parses parse we get a new one" in {
     val parser = char('h') ~> digit
-    val Success(parsed, remaining) = parser("h1")
+    val Success((parsed, remaining)) = parser("h1")
 
     parsed shouldBe '1'
     remaining shouldBe ""
@@ -135,7 +145,7 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val parser = anyChar ~> letter
     val Failure(reason) = parser("123")
 
-    reason shouldBe "2 is not letter"
+    reason shouldBe NotALetterException('2')
   }
 
   "~> when first parse fails it fails and does not call the second parser" in {
@@ -146,12 +156,12 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
     val Failure(reason) = parser("hola")
 
-    reason shouldBe "h is not digit"
+    reason shouldBe NotADigitException('h')
   }
 
   "<~ when both parses parse we get a new one" in {
     val parser = char('h') <~ digit
-    val Success(parsed, remaining) = parser("h1")
+    val Success((parsed, remaining)) = parser("h1")
 
     parsed shouldBe 'h'
     remaining shouldBe ""
@@ -161,7 +171,7 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val parser = anyChar <~ letter
     val Failure(reason) = parser("123")
 
-    reason shouldBe "2 is not letter"
+    reason shouldBe NotALetterException('2')
   }
 
   "<~ when first parse fails it fails and does not call the second parser" in {
@@ -172,14 +182,14 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
     val Failure(reason) = parser("hola")
 
-    reason shouldBe "h is not digit"
+    reason shouldBe NotADigitException('h')
   }
 
   //to do: How to mock parsers
 
   "<|> when the first parser fails and the second one parses we get the second value" in {
     val parser = digit <|> letter
-    val Success(value, remaining) = parser("lh34")
+    val Success((value, remaining)) = parser("lh34")
 
     value shouldBe 'l'
     remaining shouldBe "h34"
@@ -187,7 +197,7 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
   "satisfies when the parser parses and the value passes the condition we get a success" in {
     val parser = digit.map(_.toString.toInt).satisfies(number => number < 5)
-    val Success(value, remaining) = parser("1234")
+    val Success((value, remaining)) = parser("1234")
 
     value shouldBe 1
     remaining shouldBe "234"
@@ -197,8 +207,6 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val parser = digit.map(_.toString.toInt).satisfies(number => number > 10)
     val Failure(reason) = parser("1234")
 
-    reason shouldBe "1 does not satisfy condition"
+    reason shouldBe DoesNotSatisfyPredicateException(1)
   }
-
-
 }
