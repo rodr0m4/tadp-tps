@@ -209,4 +209,37 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
     reason shouldBe DoesNotSatisfyPredicateException(1)
   }
+
+  "? wraps a passing parser in a Some" in {
+    val Success((value, _)) = digit? "2"
+
+    value shouldBe Some('2')
+  }
+
+  "? replaces a failing parser with a None without consuming input" in {
+    val Success((value, remaining)) = digit? "ff"
+
+    value shouldBe None
+    remaining shouldBe "ff"
+  }
+
+  "* matches 0 times" in {
+    val Success((value, remaining)) = digit* "gggg"
+
+    value shouldBe List()
+    remaining shouldBe "gggg"
+  }
+
+  "* matches N times" in {
+    val Success((value, remaining)) = digit.map(_.toString.toInt)* "1234a"
+
+    value shouldBe List(1, 2, 3, 4)
+    remaining shouldBe "a"
+  }
+
+  "+ fails with 0 times" in {
+    val Failure(reason) = digit+ "f"
+
+    reason shouldBe NotADigitException('f')
+  }
 }

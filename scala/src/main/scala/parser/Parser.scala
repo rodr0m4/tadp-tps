@@ -37,11 +37,22 @@ trait Parser[A] { self =>
     override def apply(input: String): Result[Option[A]] =
       self(input).map {
         case (value, remaining) => (Some(value), remaining)
-      }.recover { case _ => (None, "") }
+      }.recover { case _ => (None, input) }
   }
 
   lazy val `?`: Parser[Option[A]] = opt
-  lazy val `*`: Parser[List[A]] = ???
+  lazy val `*`: Parser[List[A]] = new Parser[List[A]] {
+    override def apply(input: String): Result[List[A]] = {
+      val result = self(input)
+
+      if (result.isFailure) return Success((List(), input))
+
+      val (value, remaining) = result.get
+
+      this(remaining).map { case (vs, rm) => (value :: vs, rm) }
+    }
+  }
+
   lazy val `+`: Parser[List[A]] = (this <> this.*).map { case (head, tail) => head :: tail }
 }
 
