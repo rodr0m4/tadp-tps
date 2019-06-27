@@ -12,6 +12,8 @@ import scala.util.{Failure, Success}
 
 class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
+  import parser.TildeSyntax
+
   "anyChar should parse hola" in {
     val Success((char, remaining)) = anyChar("hola")
     char shouldBe 'h'
@@ -100,7 +102,7 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val parser = char('h') <> digit
     val Success((parsed, remaining)) = parser("h1")
 
-    parsed shouldBe ('h', '1')
+    parsed shouldBe 'h' ~ '1'
     remaining shouldBe ""
   }
 

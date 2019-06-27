@@ -16,11 +16,11 @@ trait Parser[A] { self =>
     override def apply(input: String): Result[A] = self(input).orElse(parser(input))
   }
 
-  def <>[B](parser: Parser[B]): Parser[(A, B)] = new Parser[(A, B)] {
-    override def apply(input: String): Result[(A, B)] = for {
+  def <>[B](parser: Parser[B]): Parser[~[A, B]] = new Parser[~[A, B]] {
+    override def apply(input: String): Result[~[A, B]] = for {
       (firstValue, firstRemaining) <- self(input)
       (secondValue, secondRemaining) <- parser(firstRemaining)
-    } yield ((firstValue, secondValue), secondRemaining)
+    } yield ((firstValue ~ secondValue), secondRemaining)
   }
 
   def ~>[B](parser: Parser[B]): Parser[B] = (this <> parser).map(_._2)
@@ -52,8 +52,7 @@ trait Parser[A] { self =>
       this(remaining).map { case (vs, rm) => (value :: vs, rm) }
     }
   }
-
-  lazy val `+`: Parser[List[A]] = (this <> this.*).map { case (head, tail) => head :: tail }
+  lazy val `+`: Parser[List[A]] = (this <> this.*).map { case head ~ tail => head :: tail }
 }
 
 case class DoesNotSatisfyPredicateException[A](value: A) extends Exception
