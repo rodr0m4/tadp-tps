@@ -1,12 +1,12 @@
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.{FreeSpec, Matchers, OneInstancePerTest}
+import org.scalatest.{FreeSpec, Matchers}
 import parser.alphaNum.NotAlphaNumException
 import parser.char.ExpectedButFound
 import parser.charSatisfies.EmptyStringException
 import parser.digit.NotADigitException
 import parser.letter.NotALetterException
 import parser.string.DoesNotStartWithException
-import parser.{DoesNotSatisfyPredicateException, Parser, alphaNum, anyChar, char, digit, letter, string, void}
+import parser.{DoesNotSatisfyPredicateException, Parser, alphaNum, anyChar, char, digit, letter, string, void, ~}
 
 import scala.util.{Failure, Success}
 
@@ -122,6 +122,30 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val Failure(reason) = parser("hola")
 
     reason shouldBe NotADigitException('h')
+  }
+
+  "<> with more complex cases" in {
+    def digits: Parser[Int] = digit.+.map(_.mkString.toInt)
+
+    val parser = digits <> anyChar <> digits map {
+      case left ~ '+' ~ right => left + right
+      case left ~ '*' ~ right => left * right
+    }
+
+    val Success((seven, "")) = parser("2+5")
+    val Success((four, "")) = parser("2*2")
+
+    seven shouldBe 7
+    four shouldBe 4
+
+    val anotherParser: Parser[(String, Int)] = string("val") <> letter.+.map(_.mkString) <> char('=') <> digits map {
+      case _ ~ id ~ _ ~ number => (id, number)
+    }
+
+    val Success(((id, number), "")) = anotherParser("valx=42")  // Yep, no spaces :P
+
+    id shouldBe "x"
+    number shouldBe 42
   }
 
   """string("karen") should parse when input is a string that starts with "karen"""" in {
