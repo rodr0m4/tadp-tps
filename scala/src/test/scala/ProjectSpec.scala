@@ -1,16 +1,18 @@
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.{FreeSpec, Matchers, OneInstancePerTest}
+import org.scalatest.{FreeSpec, Matchers}
 import parser.alphaNum.NotAlphaNumException
 import parser.char.ExpectedButFound
 import parser.charSatisfies.EmptyStringException
 import parser.digit.NotADigitException
 import parser.letter.NotALetterException
 import parser.string.DoesNotStartWithException
-import parser.{DoesNotSatisfyPredicateException, Parser, alphaNum, anyChar, char, digit, letter, string, void}
+import parser.{DoesNotSatisfyPredicateException, Parser, alphaNum, anyChar, char, digit, letter, string, void, ~}
 
 import scala.util.{Failure, Success}
 
 class ProjectSpec extends FreeSpec with Matchers with MockFactory {
+
+  import parser.TildeSyntax
 
   "anyChar should parse hola" in {
     val Success((char, remaining)) = anyChar("hola")
@@ -100,7 +102,7 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val parser = char('h') <> digit
     val Success((parsed, remaining)) = parser("h1")
 
-    parsed shouldBe ('h', '1')
+    parsed shouldBe 'h' ~ '1'
     remaining shouldBe ""
   }
 
@@ -120,6 +122,30 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val Failure(reason) = parser("hola")
 
     reason shouldBe NotADigitException('h')
+  }
+
+  "<> with more complex cases" in {
+    def digits: Parser[Int] = digit.+.map(_.mkString.toInt)
+
+    val parser = digits <> anyChar <> digits map {
+      case left ~ '+' ~ right => left + right
+      case left ~ '*' ~ right => left * right
+    }
+
+    val Success((seven, "")) = parser("2+5")
+    val Success((four, "")) = parser("2*2")
+
+    seven shouldBe 7
+    four shouldBe 4
+
+    val anotherParser: Parser[(String, Int)] = string("val") <> letter.+.map(_.mkString) <> char('=') <> digits map {
+      case _ ~ id ~ _ ~ number => (id, number)
+    }
+
+    val Success(((id, number), "")) = anotherParser("valx=42")  // Yep, no spaces :P
+
+    id shouldBe "x"
+    number shouldBe 42
   }
 
   """string("karen") should parse when input is a string that starts with "karen"""" in {
@@ -208,5 +234,38 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
     val Failure(reason) = parser("1234")
 
     reason shouldBe DoesNotSatisfyPredicateException(1)
+  }
+
+  "? wraps a passing parser in a Some" in {
+    val Success((value, _)) = digit? "2"
+
+    value shouldBe Some('2')
+  }
+
+  "? replaces a failing parser with a None without consuming input" in {
+    val Success((value, remaining)) = digit? "ff"
+
+    value shouldBe None
+    remaining shouldBe "ff"
+  }
+
+  "* matches 0 times" in {
+    val Success((value, remaining)) = digit* "gggg"
+
+    value shouldBe List()
+    remaining shouldBe "gggg"
+  }
+
+  "* matches N times" in {
+    val Success((value, remaining)) = digit.map(_.toString.toInt)* "1234a"
+
+    value shouldBe List(1, 2, 3, 4)
+    remaining shouldBe "a"
+  }
+
+  "+ fails with 0 times" in {
+    val Failure(reason) = digit+ "f"
+
+    reason shouldBe NotADigitException('f')
   }
 }
