@@ -53,6 +53,11 @@ trait Parser[A] { self =>
     }
   }
   lazy val `+`: Parser[List[A]] = (this <> this.*).map { case head ~ tail => head :: tail }
+
+  def sepBy[B](separator: Parser[B]): Parser[List[A]] =
+    this <> (separator ~> this).* map {
+      case head ~ tail => head :: tail
+    }
 }
 
 case class DoesNotSatisfyPredicateException[A](value: A) extends Exception

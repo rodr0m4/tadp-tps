@@ -268,4 +268,23 @@ class ProjectSpec extends FreeSpec with Matchers with MockFactory {
 
     reason shouldBe NotADigitException('f')
   }
+
+  "sepBy matches 1 time" in {
+    val Success((value, _)) = digit.sepBy(char('-'))("1")
+
+    value shouldBe List('1')
+  }
+
+  "sepBy matches N times" in {
+    val Success((value, _)) = digit.sepBy(char('-'))("1-2-3-4")
+
+    value shouldBe List('1', '2', '3', '4')
+  }
+
+  "sepBy partially matching separator" in {
+    val Success((value, remaining)) = digit.sepBy(char('-'))("1-")
+
+    value shouldBe List('1')
+    remaining shouldBe "-"
+  }
 }
