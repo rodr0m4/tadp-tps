@@ -12,11 +12,6 @@ trait Parser[+A] { self =>
       self(input).map { case (value, remaining) => (function(value), remaining) }
   }
 
-  def concatMap[B](function : A => Result[B]) : Parser[B] = new Parser[B] {
-    override def apply(input: String): Result[B] =
-      self(input).flatMap()
-  }
-
   def <|>[B >: A](parser: Parser[B]): Parser[B] = new Parser[B] {
     override def apply(input: String): Result[B] = self(input).orElse(parser(input))
   }
@@ -132,4 +127,8 @@ object string {
       else
         Failure(DoesNotStartWithException(prefix, input))
   }
+}
+
+object oneOf {
+  def apply[A](parsers: Parser[A]*): Parser[A] = parsers.reduce(_ <|> _)
 }
