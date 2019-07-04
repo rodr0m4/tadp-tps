@@ -18,7 +18,7 @@ trait Parser[A] { self =>
 
   def <>[B](parser: Parser[B]): Parser[(A, B)] = new Parser[(A, B)] {
     override def apply(input: String): Result[(A, B)] = for {
-      (firstValue, firstRemaining) <- self(input)
+      (firstValue, firstRemaining) <- self(input) //yo no quiero que sea este new parser sino eloriginal
       (secondValue, secondRemaining) <- parser(firstRemaining)
     } yield ((firstValue, secondValue), secondRemaining)
   }
