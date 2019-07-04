@@ -2,7 +2,7 @@ package parser
 
 import scala.util.{Failure, Success}
 
-trait Parser[A] { self =>
+trait Parser[+A] { self =>
   def apply(input: String): Result[A]
 
   def const[B](b: B): Parser[B] = map(_ => b)
@@ -12,15 +12,20 @@ trait Parser[A] { self =>
       self(input).map { case (value, remaining) => (function(value), remaining) }
   }
 
-  def <|>(parser: Parser[A]): Parser[A] = new Parser[A] {
-    override def apply(input: String): Result[A] = self(input).orElse(parser(input))
+  def concatMap[B](function : A => Result[B]) : Parser[B] = new Parser[B] {
+    override def apply(input: String): Result[B] =
+      self(input).flatMap()
+  }
+
+  def <|>[B >: A](parser: Parser[B]): Parser[B] = new Parser[B] {
+    override def apply(input: String): Result[B] = self(input).orElse(parser(input))
   }
 
   def <>[B](parser: Parser[B]): Parser[~[A, B]] = new Parser[~[A, B]] {
     override def apply(input: String): Result[~[A, B]] = for {
       (firstValue, firstRemaining) <- self(input)
       (secondValue, secondRemaining) <- parser(firstRemaining)
-    } yield ((firstValue ~ secondValue), secondRemaining)
+    } yield (firstValue ~ secondValue, secondRemaining)
   }
 
   def ~>[B](parser: Parser[B]): Parser[B] = (this <> parser).map(_._2)

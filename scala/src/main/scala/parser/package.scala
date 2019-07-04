@@ -1,7 +1,7 @@
 import scala.util.Try
 
 package object parser {
-  type Result[A] = Try[(A, String)]
+  type Result[+A] = Try[(A, String)]
 
   case class ~[+A, +B](_1: A, _2: B) {
     override def toString = s"(${_1}~${_2})"
