@@ -3,10 +3,10 @@ package parser
 object Musiquita {
   lazy val sonido: Parser[Sonido] = numero <> nota <> figura map Sonido
   lazy val acordeExplicito: Parser[Acorde] = sonido.sepBy('-') <> figura map Acorde
-//  lazy val acordeTonal: Parser[Acorde] = sonido <> oneOf(
-//    'm' -> Menor,
-//    'M' -> Mayor
-//  )
+  lazy val acordeTonal: Parser[Acorde] = sonido <> oneOf(
+    'm' -> Menor,
+    'M' -> Mayor
+  )
 
   val silencio: Parser[Silencio] = oneOf(
     '_' -> Blanca,
@@ -30,40 +30,61 @@ object Musiquita {
     'E' -> E,
     'F' -> F,
     'G' -> G
-  )
+  ) <> oneOf('#' -> { x: _.sostenido), 'b' -> (_.bemol)).? map {
+    case heneradorDeNota ~ accidente => heneradorDeNota(accidente)
+  }
 
   private val numero : Parser[Int] = digit.map(_.toString.toInt)
 }
 
-sealed trait Tocable {
-  val figura : Figura
+object Nota {
+  def notas = List(C, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B)
 }
 
-case class Silencio(override val figura : Figura) extends Tocable {
+trait Nota {
+  def notas = Nota.notas
 
+  def sostenido: Nota = notas((notas.indexOf(this) + 1) % notas.size)
+
+  def bemol: Nota = notas((notas.indexOf(this) - 1) % notas.size)
+
+  def acordeMenor(octava: Int, figura: Figura): Acorde =
+    Acorde((this :: this + 3 :: this + 7 :: Nil).map(Tono(octava, _)), figura)
+
+  def acordeMayor(octava: Int, figura: Figura): Acorde =
+    Acorde((this :: this + 4 :: this + 7 :: Nil).map(Tono(octava, _)), figura)
+
+  def +(cantidadDeSemitonos: Int): Nota = (1.to(cantidadDeSemitonos)).foldLeft(this) {
+    case (nota, _) ⇒ nota.sostenido
+  }
 }
-
-sealed trait Tonalidad
-case object Menor extends Tonalidad
-case object Mayor extends Tonalidad
-
-sealed trait Figura
-object Redonda extends Figura
-object Negra extends Figura
-object Blanca extends Figura
-object Corchea extends Figura
-object SemiCorchea extends Figura
-
-case class Sonido(tono: Int, nota: Nota, override val figura : Figura) extends Tocable
-case class Acorde(sonidos: List[Sonido], override val figura: Figura) extends Tocable
-
-sealed trait Nota
 
 case object C extends Nota
+case object Cs extends Nota
 case object D extends Nota
+case object Ds extends Nota
 case object E extends Nota
 case object F extends Nota
+case object Fs extends Nota
 case object G extends Nota
+case object Gs extends Nota
 case object A extends Nota
+case object As extends Nota
 case object B extends Nota
+
+abstract class Figura(val duracion: Int)
+case object Redonda extends Figura(1500)
+case object Blanca extends Figura(Redonda.duracion / 2)
+case object Negra extends Figura(Blanca.duracion / 2)
+case object Corchea extends Figura(Negra.duracion / 2)
+case object SemiCorchea extends Figura(Corchea.duracion / 2)
+
+case class Tono(octava: Int, nota: Nota)
+
+trait Tocable
+case class Sonido(tono: Tono, figura: Figura) extends Tocable
+case class Silencio(figura: Figura) extends Tocable
+case class Acorde(tonos: List[Tono], figura: Figura) extends Tocable
+
+type Melodia = List[Tocable]
 

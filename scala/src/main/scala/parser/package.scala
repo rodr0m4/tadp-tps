@@ -18,6 +18,25 @@ package object parser {
   implicit def charToParser(c: Char): Parser[Char] = char(c)
   implicit def stringToParser(s: String): Parser[String] = string(s)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   implicit def flatten2[A, B, C]         (f: (A, B) => C) =
     (p: ~[A, B]) => p match {case a ~ b => f(a, b)}
   implicit def flatten3[A, B, C, D]      (f: (A, B, C) => D) =
