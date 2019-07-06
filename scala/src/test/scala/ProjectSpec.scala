@@ -2,11 +2,10 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FreeSpec, Matchers}
 import parser.alphaNum.NotAlphaNumException
 import parser.char.ExpectedButFound
-import parser.charSatisfies.EmptyStringException
 import parser.digit.NotADigitException
 import parser.letter.NotALetterException
 import parser.string.DoesNotStartWithException
-import parser.{DoesNotSatisfyPredicateException, Parser, alphaNum, anyChar, char, digit, letter, string, void, ~}
+import parser.{DoesNotSatisfyPredicateException, EmptyStringException, Parser, alphaNum, anyChar, char, digit, letter, string, void, ~}
 
 import scala.util.{Failure, Success}
 

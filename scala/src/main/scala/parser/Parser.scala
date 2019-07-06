@@ -2,7 +2,7 @@ package parser
 
 import scala.util.{Failure, Success}
 
-trait Parser[+A] { self =>
+trait Parser[+A] extends ((String) => Result[A]) { self =>
   def apply(input: String): Result[A]
 
   def const[B](b: B): Parser[B] = map(_ => b)
@@ -73,9 +73,10 @@ object char {
   def apply(expected: Char): Parser[Char] = charSatisfies(_ == expected, ExpectedButFound(expected, _))
 }
 
-object charSatisfies {
+case object EmptyStringException extends Exception
 
-  case object EmptyStringException extends Exception
+
+object charSatisfies {
 
   def apply(condition: Char => Boolean,
             errorMessage: Char => Exception = x => new Exception(s"$x did not match")): Parser[Char] = new Parser[Char] {
@@ -118,12 +119,14 @@ object alphaNum extends Parser[Char] {
 
 object string {
 
-  case class DoesNotStartWithException(prefix: String, actual: String) extends Exception
+  case class DoesNotStartWithException(prefix: String, actual: String) extends Exception {
+    override def getMessage: String = s"the prefix is $prefix and the actual is $actual"
+  }
 
   def apply(prefix: String): Parser[String] = new Parser[String] {
     override def apply(input: String): Result[String] =
       if (input.startsWith(prefix))
-        Success(prefix, input.replace(prefix, ""))
+        Success(prefix, input.replaceFirst(prefix, ""))
       else
         Failure(DoesNotStartWithException(prefix, input))
   }
