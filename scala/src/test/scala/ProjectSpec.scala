@@ -313,4 +313,11 @@ class ProjectSpec extends FreeSpec with Matchers {
     val Failure(reason) = digit.map(_.toUpper)("batman")
     reason shouldBe NotADigitException('b')
   }
+
+  "sepBy partially matching separator" in {
+    val Success((value, remaining)) = digit.sepBy(char('-'))("1-")
+
+    value shouldBe List('1')
+    remaining shouldBe "-"
+  }
 }
