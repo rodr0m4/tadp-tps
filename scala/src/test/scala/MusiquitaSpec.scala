@@ -46,7 +46,25 @@ class MusiquitaSpec extends FreeSpec with Matchers{
     parsed.nota shouldBe F(SinAccidente)
     remaining shouldBe "1/4"
   }
-  "tono should not parse a figure" in {
 
+  //TODO PLIS ¿Qué espera esta excepcion ExpectedButFound?
+  "tono should not parse a figure" in {
+//    val Failure(reason) = Musiquita.tono("1/46A#")
+//    reason shouldBe ExpectedButFound('','1')
+  }
+
+  "sonido should parse a sound" in {
+    val Success((parsed, remaining)) = Musiquita.sonido("6A#1/4")
+    val tono = parsed.tono
+    tono.octava shouldBe 6
+    tono.nota shouldBe F(SinAccidente)
+    parsed.figura shouldBe Negra
+    remaining shouldBe ""
+  }
+
+  //TODO
+  "sonido should not parse a figure followed by a tone" in {
+//    val Failure(reason) = Musiquita.sonido("1/46A#")
+//    reason shouldBe ExpectedButFound("", "")
   }
 }
