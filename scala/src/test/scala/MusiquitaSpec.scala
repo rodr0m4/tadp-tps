@@ -1,4 +1,4 @@
-import musiquita.{Blanca, Musiquita, Negra, Nota, Redonda, Silencio, SinAccidente, F}
+import musiquita.{Blanca, Musiquita, Negra, Nota, Redonda, Silencio, SinAccidente, F, A, C, Sostenido, G, Corchea, E}
 import org.scalatest.{FreeSpec, Matchers}
 import parser.char.ExpectedButFound
 import parser.string.DoesNotStartWithException
@@ -66,5 +66,56 @@ class MusiquitaSpec extends FreeSpec with Matchers{
   "sonido should not parse a figure followed by a tone" in {
 //    val Failure(reason) = Musiquita.sonido("1/46A#")
 //    reason shouldBe ExpectedButFound("", "")
+  }
+
+  "acorde should parse an explicit chord" in {
+      val Success((parsed, remaining)) = Musiquita.acorde("6A+6C#+2G1/8")
+      val List(firstTone, secondTone, thirdTone) = parsed.tonos
+      firstTone.octava shouldBe 6
+      firstTone.nota shouldBe A(SinAccidente)
+      secondTone.octava shouldBe 6
+      secondTone.nota shouldBe C(Sostenido)
+      thirdTone.octava shouldBe 2
+      thirdTone.nota shouldBe G(SinAccidente)
+      parsed.figura shouldBe Corchea
+      remaining shouldBe ""
+  }
+
+  //TODO:
+  "acorde should not parse a figure" in {
+//      val Failure(reason) = Musiquita.acorde("1/2")
+//      reason shouldBe ExpectedButFound("","")
+  }
+
+  "acorde should parse mayor chord" in {
+      val Success((parsed, remaining)) = Musiquita.acorde("6AM1/2")
+      val List(firstTone, secondTone, thirdTone) = parsed.tonos
+      firstTone.octava shouldBe 6
+      firstTone.nota shouldBe A(SinAccidente)
+      secondTone.octava shouldBe 6
+      secondTone.nota shouldBe C(Sostenido)
+      thirdTone.octava shouldBe 6
+      thirdTone.nota shouldBe E(SinAccidente)
+      parsed.figura shouldBe Blanca
+      remaining shouldBe ""
+  }
+
+  "acorde should parse minor chord" in {
+    val Success((parsed, remaining)) = Musiquita.acorde("6Am1/2")
+    val List(firstTone, secondTone, thirdTone) = parsed.tonos
+    firstTone.octava shouldBe 6
+    firstTone.nota shouldBe A(SinAccidente)
+    secondTone.octava shouldBe 6
+    secondTone.nota shouldBe C(SinAccidente)
+    thirdTone.octava shouldBe 6
+    thirdTone.nota shouldBe E(SinAccidente)
+    parsed.figura shouldBe Blanca
+    remaining shouldBe ""
+  }
+
+  //TODO:
+  "acorde should not parse a silence" in {
+//    val Failure(reason) = Musiquita.acorde("-")
+//    reason shouldBe ExpectedButFound("","")
   }
 }
