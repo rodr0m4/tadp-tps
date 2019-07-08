@@ -1,8 +1,8 @@
 package parser
-
 import scala.util.{Failure, Success}
 
-trait Parser[+A] extends ((String) => Result[A]) { self =>
+trait Parser[+A] extends (String => Result[A]) {self =>
+
   def apply(input: String): Result[A]
 
   def const[B](b: B): Parser[B] = map(_ => b)
@@ -10,6 +10,10 @@ trait Parser[+A] extends ((String) => Result[A]) { self =>
   def map[B](function: A => B): Parser[B] = new Parser[B] {
     override def apply(input: String): Result[B] =
       self(input).map { case (value, remaining) => (function(value), remaining) }
+  }
+
+  def mapError(f: Throwable => Throwable): Parser[A] = new Parser[A] {
+    override def apply(input: String): Result[A] = self(input).recoverWith({ case error => Failure(f(error)) })
   }
 
   def <|>[B >: A](parser: Parser[B]): Parser[B] = new Parser[B] {
@@ -27,9 +31,9 @@ trait Parser[+A] extends ((String) => Result[A]) { self =>
 
   def <~[B](parser: Parser[B]): Parser[A] = (this <> parser).map(_._1)
 
-  def satisfies(condition: A => Boolean): Parser[A] = new Parser[A] {
+  def satisfies(condition: A => Boolean, errorMessage: A => Exception = DoesNotSatisfyPredicateException(_)): Parser[A] = new Parser[A] {
     override def apply(input: String): Result[A] = self(input).flatMap { case result@(value, _) =>
-      if (condition(value)) Success(result) else Failure(DoesNotSatisfyPredicateException(value))
+      if (condition(value)) Success(result) else Failure(errorMessage(value))
     }
   }
 
@@ -49,7 +53,7 @@ trait Parser[+A] extends ((String) => Result[A]) { self =>
 
       val (value, remaining) = result.get
 
-      this(remaining).map { case (vs, rm) => (value :: vs, rm) }
+      this (remaining).map { case (vs, rm) => (value :: vs, rm) }
     }
   }
   lazy val `+`: Parser[List[A]] = (this <> this.*).map { case head ~ tail => head :: tail }
@@ -60,78 +64,4 @@ trait Parser[+A] extends ((String) => Result[A]) { self =>
     }
 }
 
-case class DoesNotSatisfyPredicateException[A](value: A) extends Exception
 
-object anyChar extends Parser[Char] {
-  override def apply(input: String): Result[Char] = charSatisfies(_ => true)(input)
-}
-
-object char {
-
-  case class ExpectedButFound(expected: Char, found: Char) extends Exception
-
-  def apply(expected: Char): Parser[Char] = charSatisfies(_ == expected, ExpectedButFound(expected, _))
-}
-
-case object EmptyStringException extends Exception
-
-
-object charSatisfies {
-
-  def apply(condition: Char => Boolean,
-            errorMessage: Char => Exception = x => new Exception(s"$x did not match")): Parser[Char] = new Parser[Char] {
-    override def apply(input: String): Result[Char] = input match {
-      case "" => Failure(EmptyStringException)
-      case i if condition(i.head) => Success(i.head, i.tail)
-      case _ => Failure(errorMessage(input.head))
-    }
-  }
-}
-
-//Preguntar lo que tiene que devolver esta función: Unit type?
-object void extends Parser[Unit] {
-  override def apply(input: String): Result[Unit] = anyChar.const()(input)
-}
-
-object letter extends Parser[Char] {
-
-  case class NotALetterException(actual: Char) extends Exception
-
-  override def apply(input: String): Result[Char] =
-    charSatisfies(_.isLetter, NotALetterException)(input)
-}
-
-object digit extends Parser[Char] {
-
-  case class NotADigitException(actual: Char) extends Exception
-
-  override def apply(input: String): Result[Char] =
-    charSatisfies(_.isDigit, NotADigitException)(input)
-}
-
-object alphaNum extends Parser[Char] {
-
-  case class NotAlphaNumException(actual: Char) extends Exception
-
-  override def apply(input: String): Result[Char] =
-    charSatisfies(_.isLetterOrDigit, NotAlphaNumException)(input)
-}
-
-object string {
-
-  case class DoesNotStartWithException(prefix: String, actual: String) extends Exception {
-    override def getMessage: String = s"the prefix is $prefix and the actual is $actual"
-  }
-
-  def apply(prefix: String): Parser[String] = new Parser[String] {
-    override def apply(input: String): Result[String] =
-      if (input.startsWith(prefix))
-        Success(prefix, input.replaceFirst(prefix, ""))
-      else
-        Failure(DoesNotStartWithException(prefix, input))
-  }
-}
-
-object oneOf {
-  def apply[A](parsers: Parser[A]*): Parser[A] = parsers.reduce(_ <|> _)
-}

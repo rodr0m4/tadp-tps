@@ -11,5 +11,5 @@ object PlayAudio extends App {
   val Success((melodíaCumpleaños, _)) = Musiquita.melodia(cumpleaños)
   val Success((melodía, _)) = Musiquita.melodia(rickRoll)
 
-  AudioPlayer.reproducir(melodíaCumpleaños)
+  AudioPlayer.reproducir(melodía)
 }
