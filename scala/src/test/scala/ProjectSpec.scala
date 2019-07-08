@@ -132,7 +132,7 @@ class ProjectSpec extends FreeSpec with Matchers {
   "<|> should not parse something that's not parsed by any of its parsers" in {
     val parser = digit <|> letter
     val Failure(reason) = parser("-h34")
-    reason shouldBe NotALetterException('-')
+    reason shouldBe OrException(NotADigitException('-'), NotALetterException('-'))
   }
 
   "<> should parse a secuence of something parsed by the first parser followed by something parsed by the second" in {
