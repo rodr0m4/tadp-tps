@@ -1,9 +1,9 @@
 import org.scalatest.{FreeSpec, Matchers}
-import parser.{DoesNotSatisfyPredicateException, DoesNotStartWithException, EmptyStringException, ExpectedButFound, NotADigitException, NotALetterException, NotAlphaNumException, Parser, alphaNum, anyChar, char, digit, letter, string, void, ~}
+import parser.{DoesNotSatisfyPredicateException, EmptyStringException, ExpectedButFound, NotADigitException, NotALetterException, NotAlphaNumException, OrException, alphaNum, anyChar, char, digit, id, letter, string, void}
 
 import scala.util.{Failure, Success}
 
-class ProjectSpec extends FreeSpec with Matchers {
+class ParserSpec extends FreeSpec with Matchers {
 
   import parser.TildeSyntax
 
@@ -107,7 +107,7 @@ class ProjectSpec extends FreeSpec with Matchers {
 
   "string should not parse an input that does not start with the specified string" in {
     val Failure(reason) = string("karen")("rodri tiene sueño")
-    reason shouldBe DoesNotStartWithException("karen", "rodri tiene sueño")
+    reason shouldBe ExpectedButFound('k', 'r')
   }
 
   "string should not parse empty string" in {
@@ -132,10 +132,10 @@ class ProjectSpec extends FreeSpec with Matchers {
   "<|> should not parse something that's not parsed by any of its parsers" in {
     val parser = digit <|> letter
     val Failure(reason) = parser("-h34")
-    reason shouldBe NotALetterException('-')
+    reason shouldBe OrException(NotADigitException('-'), NotALetterException('-'))
   }
 
-  "<> should parse a secuence of something parsed by the first parser followed by something parsed by the second" in {
+  "<> should parse a sequence of something parsed by the first parser followed by something parsed by the second" in {
     val parser = char('h') <> digit
     val Success((parsed, remaining)) = parser("h1")
     parsed shouldBe 'h' ~ '1'
@@ -154,7 +154,7 @@ class ProjectSpec extends FreeSpec with Matchers {
     reason shouldBe NotADigitException('a')
   }
 
-  "~> should parse a secuence of something parsed by the first parser followed by something parsed by the second and return the value of the second" in {
+  "~> should parse something parsed by the first parser followed by something parsed by the second and return the value of the second" in {
     val parser = char('h') ~> digit
     val Success((parsed, remaining)) = parser("h1")
     parsed shouldBe '1'
@@ -173,7 +173,7 @@ class ProjectSpec extends FreeSpec with Matchers {
     reason shouldBe NotALetterException('2')
   }
 
-  "<~ should parse a secuence of something parsed by the first parser followed by something parsed by the second and return the value of the first" in {
+  "<~ should parse something parsed by the first parser followed by something parsed by the second and return the value of the first" in {
     val parser = char('h') <~ digit
     val Success((parsed, remaining)) = parser("h1")
     parsed shouldBe 'h'
@@ -252,7 +252,7 @@ class ProjectSpec extends FreeSpec with Matchers {
     remaining shouldBe ""
   }
 
-  "sepBy should parse a secuence parsed by the original parser until it fails separated by something parsed by its argument and return a list of parsed values" in {
+  "sepBy should parse a sequence parsed by the original parser until it fails separated by something parsed by its argument and return a list of parsed values" in {
     val Success((value, remaining)) = digit.sepBy(char('-'))("1-2-3-4-f")
     value shouldBe List('1', '2', '3', '4')
     remaining shouldBe "-f"
@@ -283,5 +283,40 @@ class ProjectSpec extends FreeSpec with Matchers {
   "map should fail if the original parser fails" in {
     val Failure(reason) = digit.map(_.toUpper)("batman")
     reason shouldBe NotADigitException('b')
+  }
+
+  "id should not consume any character" in {
+    val Success((parsed, remaining)) = id("abcdefg")
+    parsed shouldBe()
+    remaining shouldBe "abcdefg"
+  }
+
+  "oneOf should parse something parsed by one of its arguments" in {
+    val Success((parsed, remaining)) = parser.oneOf('a', 'b', 'c', 'd')("cdefg")
+    parsed shouldBe 'c'
+    remaining shouldBe "defg"
+  }
+
+  "oneOf should not parse something not parsed by any of its arguments" in {
+    val Failure(reason) = parser.oneOf(letter, digit, alphaNum)("-+*/")
+    reason shouldBe OrException(List(NotALetterException('-'), NotADigitException('-'), NotAlphaNumException('-')))
+  }
+
+  "oneOf should not parse empty string" in {
+    val Failure(reason) = parser.oneOf('a', "bc")("")
+    reason shouldBe EmptyStringException
+  }
+
+  "mapError should map error with provided function" in {
+    case class CustomException(e: Throwable) extends Exception
+    val Failure(reason) = digit.mapError { case e => CustomException(e) }("a")
+    reason shouldBe CustomException(NotADigitException('a'))
+  }
+
+  "mapError should not change anything on successful parse" in {
+    case class CustomException(e: Throwable) extends Exception
+    val Success((parsed, remaining)) = digit.mapError { case e => CustomException(e) }("123")
+    parsed shouldBe '1'
+    remaining shouldBe "23"
   }
 }

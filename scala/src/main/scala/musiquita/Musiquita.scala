@@ -44,8 +44,8 @@ object Musiquita {
     'G' -> G,
     'A' -> A,
     'B' -> B
-  ) <> oneOf( '#' -> Sostenido, 'b' -> Bemol ).?.map(_.getOrElse(SinAccidente)) map {
-    // Deberíamos fallar en estos casos?
+  ) <> oneOf('#' -> Sostenido, 'b' -> Bemol).?.map(_.getOrElse(SinAccidente)) map {
+    // TODO: Deberíamos fallar en estos casos?
     case B ~ Sostenido => C()
     case C ~ Bemol => B()
     case E ~ Sostenido => F()
@@ -54,12 +54,15 @@ object Musiquita {
     case nota ~ accidente => nota(accidente)
   }
 
-  private val numero : Parser[Int] = digit.map(_.toString.toInt)
+  private val numero: Parser[Int] = digit.map(_.toString.toInt)
 }
 
 sealed trait Accidente
+
 case object SinAccidente extends Accidente
+
 case object Sostenido extends Accidente
+
 case object Bemol extends Accidente
 
 sealed trait Nota {
@@ -91,8 +94,8 @@ object Nota {
     D(Sostenido) -> 3,
     E(Bemol) -> 3,
     E() -> 4,
-    F(Bemol) -> 4,  // TODO: Sacar?
-    E(Sostenido) -> 5,  // TODO: Sacar?
+    F(Bemol) -> 4, // TODO: Sacar?
+    E(Sostenido) -> 5, // TODO: Sacar?
     F() -> 5,
     F(Sostenido) -> 6,
     G(Bemol) -> 6,
@@ -121,30 +124,45 @@ object Nota {
   )
 
   def notaToId(nota: Nota): Int = notaToIdTable.getOrElse(nota, 0)
+
   def idToNota(id: Int): Nota = idToNotaTable.getOrElse(id, C())
 }
 
 case class C(override val accidente: Accidente = SinAccidente) extends Nota
+
 case class D(override val accidente: Accidente = SinAccidente) extends Nota
+
 case class E(override val accidente: Accidente = SinAccidente) extends Nota
+
 case class F(override val accidente: Accidente = SinAccidente) extends Nota
+
 case class G(override val accidente: Accidente = SinAccidente) extends Nota
+
 case class A(override val accidente: Accidente = SinAccidente) extends Nota
+
 case class B(override val accidente: Accidente = SinAccidente) extends Nota
 
+
 abstract class Figura(val duracion: Int)
+
 case object Redonda extends Figura(1500)
+
 case object Blanca extends Figura(Redonda.duracion / 2)
+
 case object Negra extends Figura(Blanca.duracion / 2)
+
 case object Corchea extends Figura(Negra.duracion / 2)
+
 case object SemiCorchea extends Figura(Corchea.duracion / 2)
+
 
 case class Tono(octava: Int, nota: Nota)
 
+
 trait Tocable
+
 case class Sonido(tono: Tono, figura: Figura) extends Tocable
+
 case class Silencio(figura: Figura) extends Tocable
+
 case class Acorde(tonos: List[Tono], figura: Figura) extends Tocable
-
-
-
