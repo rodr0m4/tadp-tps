@@ -1,7 +1,7 @@
-import musiquita.{A, Blanca, C, Corchea, E, G, Musiquita, Negra, Silencio, SinAccidente, Sonido, Sostenido, Tono}
-import org.scalatest.{FreeSpec, Matchers}
-import parser.{DoesNotStartWithException, ExpectedButFound}
 import musiquita.Musiquita._
+import musiquita._
+import org.scalatest.{FreeSpec, Matchers}
+import parser.OrException
 
 import scala.util.{Failure, Success}
 
@@ -14,7 +14,7 @@ class MusiquitaSpec extends FreeSpec with Matchers {
 
   "silencio should not parse a figure" in {
     val Failure(reason) = silencio("4 - A")
-    reason shouldBe ExpectedButFound('~', '4')
+    assert(reason.isInstanceOf[OrException])
   }
 
   "nota should parse singleton note" in {
@@ -31,7 +31,7 @@ class MusiquitaSpec extends FreeSpec with Matchers {
 
   "nota should not parse a silence" in {
     val Failure(reason) = nota("- A")
-    reason shouldBe ExpectedButFound('B', '-')
+    assert(reason.isInstanceOf[OrException])
   }
 
   "figura should parse a figure" in {
@@ -42,18 +42,18 @@ class MusiquitaSpec extends FreeSpec with Matchers {
 
   "figura should not parse something that is not a figure" in {
     val Failure(reason) = figura("1//2")
-    reason shouldBe DoesNotStartWithException("16", "/2")
+    assert(reason.isInstanceOf[OrException])
   }
 
   "tono should parse a tone" in {
     val Success((parsed, remaining)) = tono("6A#1/4")
-    parsed shouldBe A(Sostenido)
+    parsed shouldBe Tono(6, A(Sostenido))
     remaining shouldBe "1/4"
   }
 
   "tono should not parse a figure" in {
     val Failure(reason) = Musiquita.tono("1/46A#")
-    reason shouldBe ExpectedButFound('B', '/')
+    assert(reason.isInstanceOf[OrException])
   }
 
   "sonido should parse a sound" in {
@@ -64,7 +64,7 @@ class MusiquitaSpec extends FreeSpec with Matchers {
 
   "sonido should not parse a figure followed by a tone" in {
     val Failure(reason) = Musiquita.sonido("1/46A#")
-    reason shouldBe ExpectedButFound('B', '/')
+    assert(reason.isInstanceOf[OrException])
   }
 
   "acorde should parse an explicit chord" in {
@@ -80,7 +80,7 @@ class MusiquitaSpec extends FreeSpec with Matchers {
 
   "acorde should not parse a figure" in {
     val Failure(reason) = Musiquita.acorde("1/2")
-    reason shouldBe ExpectedButFound('B', '/')
+    assert(reason.isInstanceOf[OrException])
   }
 
   "acorde should parse mayor chord" in {
@@ -105,6 +105,6 @@ class MusiquitaSpec extends FreeSpec with Matchers {
 
   "acorde should not parse a silence" in {
     val Failure(reason) = Musiquita.acorde("-")
-    reason shouldBe ExpectedButFound('B', '/')
+    assert(reason.isInstanceOf[OrException])
   }
 }
