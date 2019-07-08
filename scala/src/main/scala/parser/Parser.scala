@@ -17,8 +17,13 @@ trait Parser[+A] extends (String => Result[A]) {self =>
   }
 
   def <|>[B >: A](parser: Parser[B]): Parser[B] = new Parser[B] {
-    override def apply(input: String): Result[B] = self(input).orElse(parser(input))
-  }
+    override def apply(input: String): Result[B] =
+      self(input).recoverWith { case firstError =>
+        parser(input).recoverWith { case secondError =>
+          Failure(OrException(firstError, secondError))
+        }
+      }
+    }
 
   def <>[B](parser: Parser[B]): Parser[~[A, B]] = new Parser[~[A, B]] {
     override def apply(input: String): Result[~[A, B]] = for {

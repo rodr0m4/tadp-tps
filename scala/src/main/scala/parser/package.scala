@@ -20,8 +20,7 @@ package object parser {
   val digit: Parser[Char] = anyChar.satisfies(_.isDigit, NotADigitException)
 
   val alphaNum: Parser[Char] = (digit <|> letter).mapError {
-    case NotADigitException(character) => NotAlphaNumException(character)
-    case NotALetterException(character) => NotAlphaNumException(character)
+    case OrException(List(NotADigitException(_), NotALetterException(character))) => NotAlphaNumException(character)
     case e => e
   }
 
