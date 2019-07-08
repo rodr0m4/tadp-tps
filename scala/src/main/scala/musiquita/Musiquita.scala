@@ -48,8 +48,8 @@ object Musiquita {
     // Deberíamos fallar en estos casos?
     case B ~ Sostenido => C()
     case C ~ Bemol => B()
-    case A ~ Sostenido => F()
-    case F ~ Bemol => A()
+    case E ~ Sostenido => F()
+    case F ~ Bemol => E()
 
     case nota ~ accidente => nota(accidente)
   }

@@ -1,10 +1,5 @@
 import org.scalatest.{FreeSpec, Matchers}
-import parser.alphaNum.NotAlphaNumException
-import parser.char.ExpectedButFound
-import parser.digit.NotADigitException
-import parser.letter.NotALetterException
-import parser.string.DoesNotStartWithException
-import parser.{DoesNotSatisfyPredicateException, EmptyStringException, Parser, alphaNum, anyChar, char, digit, letter, string, void, ~}
+import parser.{DoesNotSatisfyPredicateException, DoesNotStartWithException, EmptyStringException, ExpectedButFound, NotADigitException, NotALetterException, NotAlphaNumException, Parser, alphaNum, anyChar, char, digit, letter, string, void, ~}
 
 import scala.util.{Failure, Success}
 

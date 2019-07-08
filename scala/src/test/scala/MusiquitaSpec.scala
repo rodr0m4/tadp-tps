@@ -1,34 +1,32 @@
-import musiquita.{Blanca, Musiquita, Negra, Nota, Redonda, Silencio, SinAccidente, F, A, C, Sostenido, G, Corchea, E}
+import musiquita.{A, Blanca, C, Corchea, E, F, G, Musiquita, Negra, Nota, Redonda, Silencio, SinAccidente, Sostenido}
 import org.scalatest.{FreeSpec, Matchers}
-import parser.char.ExpectedButFound
-import parser.string.DoesNotStartWithException
+import parser.{DoesNotStartWithException, ExpectedButFound}
 
 import scala.util.{Failure, Success}
 
 class MusiquitaSpec extends FreeSpec with Matchers{
-  val idOfA = 9
   "silencio should parse a silence" in {
-    val Success((parsed, remaining)) = Musiquita.silencio("-A")
+    val Success((parsed, remaining)) = Musiquita.silencio("- A")
     val Silencio(nota) = parsed
     nota.duracion shouldBe Redonda.duracion/4
-    remaining shouldBe "A"
+    remaining shouldBe " A"
   }
   "silencio should not parse a figure" in {
-    val Failure(reason) = Musiquita.silencio("4-A")
+    val Failure(reason) = Musiquita.silencio("4 - A")
     reason shouldBe ExpectedButFound('~', '4')
   }
   "nota should parse singleton note" in {
-    val Success((parsed, remaining)) = Musiquita.nota("A-A")
-    Nota.notaToId(parsed) shouldBe idOfA
-    remaining shouldBe "-A"
+    val Success((parsed, remaining)) = Musiquita.nota("A - A")
+    parsed shouldBe A()
+    remaining shouldBe " - A"
   }
   "nota should parse composed note" in {
-    val Success((parsed, remaining)) = Musiquita.nota("A#-A")
-    Nota.notaToId(parsed) shouldBe idOfA + 1
-    remaining shouldBe "-A"
+    val Success((parsed, remaining)) = Musiquita.nota("A#- A")
+    parsed shouldBe A(Sostenido)
+    remaining shouldBe "- A"
   }
   "nota should not parse a silence" in {
-    val Failure(reason) = Musiquita.nota("-A")
+    val Failure(reason) = Musiquita.nota("- A")
     reason shouldBe ExpectedButFound('B','-')
   }
   "figura should parse a figure" in {
@@ -43,7 +41,7 @@ class MusiquitaSpec extends FreeSpec with Matchers{
   "tono should parse a tone" in {
     val Success((parsed, remaining)) = Musiquita.tono("6A#1/4")
     parsed.octava shouldBe 6
-    parsed.nota shouldBe F(SinAccidente)
+    parsed.nota shouldBe A(Sostenido)
     remaining shouldBe "1/4"
   }
 
@@ -57,7 +55,7 @@ class MusiquitaSpec extends FreeSpec with Matchers{
     val Success((parsed, remaining)) = Musiquita.sonido("6A#1/4")
     val tono = parsed.tono
     tono.octava shouldBe 6
-    tono.nota shouldBe F(SinAccidente)
+    tono.nota shouldBe A(Sostenido)
     parsed.figura shouldBe Negra
     remaining shouldBe ""
   }
