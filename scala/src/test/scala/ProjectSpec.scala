@@ -18,25 +18,25 @@ class ProjectSpec extends FreeSpec with Matchers {
     reason shouldBe EmptyStringException
   }
 
-  "char(specificCharacter) should parse the specified character" in {
+  "char should parse the specified character" in {
     val Success((parsed, remaining)) = char('x')("xol")
     parsed shouldBe 'x'
     remaining shouldBe "ol"
   }
 
-  "char(specificCharacter) should not parse a character that was not specified" in {
+  "char should not parse a character that was not specified" in {
     val Failure(reason) = char('x')("zol")
     reason shouldBe ExpectedButFound('x', 'z')
   }
 
-  "char(specificCharacter) should not parse empty string" in {
+  "char should not parse empty string" in {
     val Failure(reason) = char('x')("")
     reason shouldBe EmptyStringException
   }
 
   "void should parse first character" in {
     val Success((parsed, remaining)) = void("hola")
-    parsed shouldBe ()
+    parsed shouldBe()
     remaining shouldBe "ola"
   }
 
@@ -89,7 +89,7 @@ class ProjectSpec extends FreeSpec with Matchers {
     remaining shouldBe "234abcd"
   }
 
-  "alphaNum should not parse a symbol" in {
+  "alphaNum should not parse a character that is neither a letter nor a digit" in {
     val Failure(reason) = alphaNum("#ModoDiablo")
     reason shouldBe NotAlphaNumException('#')
   }
@@ -99,119 +99,94 @@ class ProjectSpec extends FreeSpec with Matchers {
     reason shouldBe EmptyStringException
   }
 
-  "string(specifiedWord) should parse a string that starts with the specified word" in {
+  "string should parse an input that starts with the specified string" in {
     val Success((parsed, remaining)) = string("karen")("karen tiene sueño")
     parsed shouldBe "karen"
     remaining shouldBe " tiene sueño"
   }
 
-  "string(specifiedWord) should not parse a string that does not start with the specified word" in {
+  "string should not parse an input that does not start with the specified string" in {
     val Failure(reason) = string("karen")("rodri tiene sueño")
     reason shouldBe DoesNotStartWithException("karen", "rodri tiene sueño")
   }
 
-  "string(specifiedWord) should not parse empty string" in {
+  "string should not parse empty string" in {
     val Failure(reason) = string("karen")("")
     reason shouldBe EmptyStringException
   }
 
-  "digit <|> letter should parse a character that is a digit" in {
+  "<|> should parse something that's parsed by its first parser" in {
     val parser = digit <|> letter
     val Success((value, remaining)) = parser("5h34")
     value shouldBe '5'
     remaining shouldBe "h34"
   }
 
-  "digit <|> letter should parse a character that is a letter" in {
+  "<|> should parse something that's parsed by its second parser" in {
     val parser = digit <|> letter
     val Success((value, remaining)) = parser("ah34")
     value shouldBe 'a'
     remaining shouldBe "h34"
   }
 
-  "digit <|> letter should not parse a symbol" in {
+  "<|> should not parse something that's not parsed by any of its parsers" in {
     val parser = digit <|> letter
     val Failure(reason) = parser("-h34")
     reason shouldBe NotALetterException('-')
   }
 
-  "parserA <> parserB should succeeded if both parsing finish with success" in {
+  "<> should parse a secuence of something parsed by the first parser followed by something parsed by the second" in {
     val parser = char('h') <> digit
     val Success((parsed, remaining)) = parser("h1")
     parsed shouldBe 'h' ~ '1'
     remaining shouldBe ""
   }
 
-  "parserA <> parserB should complete the first parsing but the second one should fail" in {
+  "<> should not parse something parsed by the first parser followed by something not parsed by the second" in {
     val parser = anyChar <> letter
     val Failure(reason) = parser("123")
     reason shouldBe NotALetterException('2')
   }
 
-  "parserA <> parserB should not complete the second parsing if the first one fails" in {
+  "<> should not parse something not parsed by the first parser" in {
     val parser = digit <> letter
     val Failure(reason) = parser("abc")
     reason shouldBe NotADigitException('a')
   }
 
-  //TODO: Is this really necessary?
-  "<> with more complex cases" in {
-    def digits: Parser[Int] = digit.+.map(_.mkString.toInt)
-
-    val parser = digits <> anyChar <> digits map {
-      case left ~ '+' ~ right => left + right
-      case left ~ '*' ~ right => left * right
-    }
-
-    val Success((seven, "")) = parser("2+5")
-    val Success((four, "")) = parser("2*2")
-
-    seven shouldBe 7
-    four shouldBe 4
-
-    val anotherParser: Parser[(String, Int)] = string("val") <> letter.+.map(_.mkString) <> char('=') <> digits map {
-      case _ ~ id ~ _ ~ number => (id, number)
-    }
-
-    val Success(((id, number), "")) = anotherParser("valx=42") // Yep, no spaces :P
-
-    id shouldBe "x"
-    number shouldBe 42
-  }
-
-  "firstParser ~> secondParser should parse a string and return the value of the second parser" in {
+  "~> should parse a secuence of something parsed by the first parser followed by something parsed by the second and return the value of the second" in {
     val parser = char('h') ~> digit
     val Success((parsed, remaining)) = parser("h1")
     parsed shouldBe '1'
     remaining shouldBe ""
   }
 
-  "firstParser ~> secondParser should not finish parsing when the first parser fails" in {
+  "~> should not parse something that's not parsed by the first parser" in {
     val parser = letter ~> anyChar
     val Failure(reason) = parser("123")
     reason shouldBe NotALetterException('1')
   }
 
-  "firstParser ~> secondParser should not finish parsing if the second parser fails" in {
+  "~> should not parse something that's parsed by the first parser followed by something that's not parsed by the second" in {
     val parser = anyChar ~> letter
     val Failure(reason) = parser("123")
     reason shouldBe NotALetterException('2')
   }
 
-  "firstParser <~ secondParser should finish parsing and return the value of the first parser" in {
+  "<~ should parse a secuence of something parsed by the first parser followed by something parsed by the second and return the value of the first" in {
     val parser = char('h') <~ digit
     val Success((parsed, remaining)) = parser("h1")
     parsed shouldBe 'h'
     remaining shouldBe ""
   }
 
-  "firstParser <~ secondParser should not finish parsing if first parser fails" in {
+  "<~ should not parse something that's not parsed by the first parser" in {
     val parser = letter <~ anyChar
     val Failure(reason) = parser("123")
     reason shouldBe NotALetterException('1')
   }
 
-  "firstParser <~ secondParser should not finish parsing if the second parser fails" in {
+  "<~ should not parse something that's parsed by the first parser followed by something that's not parsed by the second" in {
     val parser = anyChar <~ letter
     val Failure(reason) = parser("123")
     reason shouldBe NotALetterException('2')
@@ -236,83 +211,77 @@ class ProjectSpec extends FreeSpec with Matchers {
     reason shouldBe NotADigitException('a')
   }
 
-  "optional parser should successfully parse and return the optional value" in {
-    val Success((value, _)) = digit ? "2"
+  "opt should parse successfully something parsed by the original parser" in {
+    val Success((value, remaining)) = digit ? "2"
     value shouldBe Some('2')
+    remaining shouldBe ""
   }
 
-  "optional parser should not parse value if the original parser fails but opt should return successfully without consuming input" in {
+  "opt should return successfully and not consume any input when the original parser fails" in {
     val Success((value, remaining)) = digit ? "ff"
     value shouldBe None
     remaining shouldBe "ff"
   }
 
-  "parser * should parse word to empty list if the original parser fails" in {
+  "* should parse to empty list if the original parser fails" in {
     val Success((value, remaining)) = digit * "gggg"
     value shouldBe List()
     remaining shouldBe "gggg"
   }
 
-  "parser * should parse up to the point when the original parser fails and return parsed values" in {
+  "* should parse up to the point when the original parser fails and return a list of parsed values" in {
     val Success((value, remaining)) = digit * "1234a"
     value shouldBe List('1', '2', '3', '4')
     remaining shouldBe "a"
   }
 
-  "parser + should not parse if the original parser fails" in {
+  "+ should not parse if the original parser fails" in {
     val Failure(reason) = digit + "f"
     reason shouldBe NotADigitException('f')
   }
 
-  "parser + should parse up to the point when the original parser fails and return parsed values'" in {
+  "+ should parse up to the point when the original parser fails and return a list of parsed values'" in {
     val Success((value, remaining)) = digit + "1234f"
     value shouldBe List('1', '2', '3', '4')
     remaining shouldBe "f"
   }
 
-  "parserA.sepBy(parserB) should parse word without the separation" in {
+  "sepBy should parse something parsed by the original parser" in {
     val Success((value, remaining)) = digit.sepBy(char('-'))("1")
     value shouldBe List('1')
     remaining shouldBe ""
   }
 
-  "parserA.sepBy(parserB) should parse up to the point when the parserA fails and separating by the criterion of the parserB" in {
+  "sepBy should parse a secuence parsed by the original parser until it fails separated by something parsed by its argument and return a list of parsed values" in {
     val Success((value, remaining)) = digit.sepBy(char('-'))("1-2-3-4-f")
     value shouldBe List('1', '2', '3', '4')
     remaining shouldBe "-f"
   }
 
-  "parserA.sepBy(parserB) should not parse if the parserA fails" in {
+  "sepBy should fail if the original parser fails" in {
     val Failure(reason) = digit.sepBy(char('-'))("a-b-c-d")
     reason shouldBe NotADigitException('a')
   }
 
-  "parserA.const(specificValue) should parse and replace the original value for the specificValue" in {
+  "const should parse successfuly when the original parser does and replace the parsed value for its argument" in {
     val Success((parsed, remaining)) = anyChar.const("Karen es la mas kpa")("hola")
     parsed shouldBe "Karen es la mas kpa"
     remaining shouldBe "ola"
   }
 
-  "parserA.const(specificValue) should fail if parserA fails" in {
+  "const should fail if the original parser fails" in {
     val Failure(reason) = char('x').const(true)("karen")
     reason shouldBe ExpectedButFound('x', 'k')
   }
 
-  "parserA.map(transformation) should parse and transform the value" in {
+  "map should transform the value on successful parsing" in {
     val Success((parsed, remaining)) = anyChar.map(_.toUpper)("batman")
     parsed shouldBe 'B'
     remaining shouldBe "atman"
   }
 
-  "parserA.map(transformation) should not parse if the parserA fails" in {
+  "map should fail if the original parser fails" in {
     val Failure(reason) = digit.map(_.toUpper)("batman")
     reason shouldBe NotADigitException('b')
-  }
-
-  "sepBy partially matching separator" in {
-    val Success((value, remaining)) = digit.sepBy(char('-'))("1-")
-
-    value shouldBe List('1')
-    remaining shouldBe "-"
   }
 }
